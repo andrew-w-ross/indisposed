@@ -62,9 +62,6 @@ web_modules/
 # Output of 'npm pack'
 *.tgz
 
-# Yarn Integrity file
-.yarn-integrity
-
 # dotenv environment variable files
 .env
 .env.*
@@ -125,7 +122,7 @@ dist
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 
-# yarn v3
+# Yarn not using zero installs
 .pnp.*
 .yarn/*
 !.yarn/patches
