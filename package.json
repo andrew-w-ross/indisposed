@@ -67,5 +67,8 @@
 		"./src/polyfill.ts"
 	],
 	"type": "module",
-	"version": "1.0.0"
+	"version": "1.0.0",
+	"dependencies": {
+		"type-fest": "^5.2.0"
+	}
 }

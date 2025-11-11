@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from 'vitest/config';
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
@@ -26,4 +26,12 @@ export default defineConfig({
 	optimizeDeps: {
 		exclude: ["core-js", "core-js/proposals/explicit-resource-management"],
 	},
+	test: {
+		typecheck: {
+			enabled: true,
+			include: ['src/**/*.test-d.ts'],
+			checker: 'tsc',
+			tsconfig: './tsconfig.test.json',
+		},
+	}
 });

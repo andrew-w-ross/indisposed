@@ -6,8 +6,9 @@
 		"types": [],
 		"lib": [
 			"ES2023",
-			"esnext.disposable",
-			"webworker"
+			"ESNext.disposable",
+			"ES2024.Promise",
+			"WebWorker"
 		],
 		"strict": true,
 		"noUncheckedIndexedAccess": true,
