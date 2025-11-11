@@ -1,0 +1,35 @@
+{
+  "name": "indisposed",
+  "version": "1.0.0",
+  "description": "The missing utilities for disposable resources.",
+  "packageManager": "yarn@4.11.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrew-w-ross/indisposed.git"
+  },
+  "author": "andrew-w-ross",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/andrew-w-ross/indisposed/issues"
+  },
+  "homepage": "https://github.com/andrew-w-ross/indisposed#readme",
+  "keywords": [
+    "disposable",
+    "dispose",
+    "cleanup",
+    "resource-management",
+    "lifecycle",
+    "teardown",
+    "async-iterator",
+    "async-iterable",
+    "event-handler",
+    "event-to-iterator",
+    "iterator-utils",
+    "utilities",
+    "typescript"
+  ]
+}
