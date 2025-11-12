@@ -1,6 +1,6 @@
 import { describe, expectTypeOf, it } from "vitest";
 import type { Fn } from "~/types";
-import { handleOn, handleOnce } from "./handlers";
+import { on, once } from "./handlers";
 
 describe("handleOnce", () => {
 	type TestEmitter = {
@@ -17,21 +17,19 @@ describe("handleOnce", () => {
 	const emitter = null as unknown as TestEmitter;
 
 	it("should resolve with the inferred handler arguments", () => {
-		expectTypeOf(
-			handleOnce(emitter, "stringEvent"),
-		).resolves.toEqualTypeOf<string>();
-		expectTypeOf(handleOnce(emitter, "tupleEvent")).resolves.toEqualTypeOf<
+		expectTypeOf(once(emitter, "stringEvent")).resolves.toEqualTypeOf<string>();
+		expectTypeOf(once(emitter, "tupleEvent")).resolves.toEqualTypeOf<
 			[number, boolean]
 		>();
 		expectTypeOf(
-			handleOnce(emitter, "booleanEvent"),
+			once(emitter, "booleanEvent"),
 		).resolves.toEqualTypeOf<boolean>();
-		expectTypeOf(handleOnce(emitter, "voidEvent")).resolves.toBeUndefined();
+		expectTypeOf(once(emitter, "voidEvent")).resolves.toBeUndefined();
 	});
 
 	it("should reject invalid event names", () => {
 		// @ts-expect-error - 'invalidEvent' is not a valid event name
-		void handleOnce(emitter, "invalidEvent");
+		void once(emitter, "invalidEvent");
 	});
 });
 
@@ -50,17 +48,17 @@ describe("handleOn", () => {
 	const emitter = null as unknown as TestEmitter;
 
 	it("should return an async iterator with proper type", () => {
-		const stringIterator = handleOn(emitter, "stringEvent");
+		const stringIterator = on(emitter, "stringEvent");
 		expectTypeOf(stringIterator).toHaveProperty("next");
 		expectTypeOf(stringIterator).toHaveProperty(Symbol.dispose);
 		expectTypeOf(stringIterator).toHaveProperty(Symbol.asyncIterator);
 	});
 
 	it("should infer correct value types from event handlers", () => {
-		const stringIterator = handleOn(emitter, "stringEvent");
-		const numberIterator = handleOn(emitter, "numberEvent");
-		const tupleIterator = handleOn(emitter, "tupleEvent");
-		const voidIterator = handleOn(emitter, "voidEvent");
+		const stringIterator = on(emitter, "stringEvent");
+		const numberIterator = on(emitter, "numberEvent");
+		const tupleIterator = on(emitter, "tupleEvent");
+		const voidIterator = on(emitter, "voidEvent");
 
 		// Verify the iterator yields the correct types by checking the resolved value
 		expectTypeOf(stringIterator).toExtend<AsyncIterableIterator<string>>();
@@ -72,12 +70,12 @@ describe("handleOn", () => {
 	});
 
 	it("should work with using declaration", () => {
-		using iterator = handleOn(emitter, "numberEvent");
+		using iterator = on(emitter, "numberEvent");
 		expectTypeOf(iterator).toHaveProperty(Symbol.dispose);
 	});
 
 	it("should reject invalid event names", () => {
 		// @ts-expect-error - 'invalidEvent' is not a valid event name
-		void handleOn(emitter, "invalidEvent");
+		void on(emitter, "invalidEvent");
 	});
 });

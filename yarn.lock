@@ -942,7 +942,6 @@ __metadata:
   dependencies:
     core-js: "npm:^3.46.0"
     prettier: "npm:^3.6.2"
-    type-fest: "npm:^5.2.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^7.2.2"
     vite-tsconfig-paths: "npm:^5.1.4"
@@ -1494,13 +1493,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tagged-tag@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "tagged-tag@npm:1.0.0"
-  checksum: 10c0/91d25c9ffb86a91f20522cefb2cbec9b64caa1febe27ad0df52f08993ff60888022d771e868e6416cf2e72dab68449d2139e8709ba009b74c6c7ecd4000048d1
-  languageName: node
-  linkType: hard
-
 "tar@npm:^7.5.2":
   version: 7.5.2
   resolution: "tar@npm:7.5.2"
@@ -1556,15 +1548,6 @@ __metadata:
   bin:
     tsconfck: bin/tsconfck.js
   checksum: 10c0/269c3c513540be44844117bb9b9258fe6f8aeab026d32aeebf458d5299125f330711429dbb556dbf125a0bc25f4a81e6c24ac96de2740badd295c3fb400f66c4
-  languageName: node
-  linkType: hard
-
-"type-fest@npm:^5.2.0":
-  version: 5.2.0
-  resolution: "type-fest@npm:5.2.0"
-  dependencies:
-    tagged-tag: "npm:^1.0.0"
-  checksum: 10c0/5fd6c651c08d735213257c1b9498dc4a5b78ce94748901da5945a8e0cde5152dfba59c4bd749845072278ebf92be4351369ed5c79cc695402d3aa4fe1d3f9aa5
   languageName: node
   linkType: hard
 

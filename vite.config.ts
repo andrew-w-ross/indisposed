@@ -3,6 +3,9 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
 	plugins: [tsconfigPaths()],
+	resolve: {
+		conditions: ["development"],
+	},
 	build: {
 		emptyOutDir: false,
 		sourcemap: true,

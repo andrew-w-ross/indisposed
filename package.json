@@ -18,10 +18,12 @@
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
+			"development": "./src/index.ts",
 			"default": "./dist/index.js"
 		},
 		"./no-polyfill": {
 			"types": "./dist/no-polyfill.d.ts",
+			"development": "./src/no-polyfill.ts",
 			"default": "./dist/no-polyfill.js"
 		}
 	},
@@ -70,8 +72,5 @@
 		"./src/polyfill.ts"
 	],
 	"type": "module",
-	"version": "1.0.0",
-	"dependencies": {
-		"type-fest": "^5.2.0"
-	}
+	"version": "0.0.1"
 }

@@ -1,73 +1,32 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import type { IsLiteral } from "type-fest";
-import type { ExtractParams, Fn, OverLoadFunctions } from "~/types";
+import type { EventHandlerParams, EventNames, Fn } from "~/types";
 import { toDisposable } from "./disposable";
+import { type UnpackArray, unpackArray } from "./fn";
 
 export type Subscription = (event: any, handler: Fn) => any;
 
 /**
  * Represents an event emitter with an `off` method for removing listeners.
  */
-export type Off = {
+export type HasOff = {
 	off: Subscription;
 };
 
 /**
  * Represents an event emitter with an `on` method for registering listeners.
  */
-export type On = {
+export type HasOn = {
 	on: Subscription;
-} & Off;
+} & HasOff;
 
 /**
  * Represents an event emitter with a `once` method for one-time listeners.
  */
-export type Once = {
+export type HasOnce = {
 	once: Subscription;
-} & Off;
-
-type NakedEventNames<Parameters> = Parameters extends [infer E, ...unknown[]]
-	? IsLiteral<E> extends true
-		? E
-		: never
-	: never;
-
-export type EventNames<Functions> = NakedEventNames<
-	Parameters<OverLoadFunctions<Functions>>
->;
-
-//Leave this type as
-type DistributeParams<Parameters, Event> = Parameters extends unknown
-	? Parameters extends [Event, infer Handler]
-		? ExtractParams<Handler> extends infer P
-			? P extends any[]
-				? any[] extends P
-					? never
-					: P
-				: never
-			: never
-		: never
-	: never;
-
-export type EventHandlerParams<Functions, Event> = DistributeParams<
-	Parameters<OverLoadFunctions<Functions>>,
-	Event
->;
-
-type UnpackArray<T extends unknown[]> = T["length"] extends 0
-	? undefined
-	: T["length"] extends 1
-		? T[0]
-		: T;
-
-function unpackArray<T extends unknown[]>(values: T) {
-	return (
-		values.length === 0 ? undefined : values.length === 1 ? values[0] : values
-	) as UnpackArray<T>;
-}
+} & HasOff;
 
 export type OnceResult<
-	EventEmitter extends Once,
+	EventEmitter extends HasOnce,
 	Event extends EventNames<EventEmitter["once"]>,
 	Rejects extends boolean,
 > = Rejects extends true
@@ -101,8 +60,8 @@ export type OnceResult<
  * console.error(value.message);
  * ```
  */
-export function handleOnce<
-	EventEmitter extends Once,
+export function once<
+	EventEmitter extends HasOnce,
 	const Event extends EventNames<EventEmitter["once"]>,
 	const Rejects extends boolean = false,
 >(emitter: EventEmitter, event: Event, rejects?: Rejects) {
@@ -121,7 +80,7 @@ export function handleOnce<
 }
 
 export type OnResult<
-	EventEmitter extends On,
+	EventEmitter extends HasOn,
 	Event extends EventNames<EventEmitter["on"]>,
 > = UnpackArray<EventHandlerParams<EventEmitter["on"], Event>>;
 
@@ -150,8 +109,8 @@ export type OnResult<
  * }
  * ```
  */
-export function handleOn<
-	EventEmitter extends On,
+export function on<
+	EventEmitter extends HasOn,
 	const Event extends EventNames<EventEmitter["on"]>,
 >(emitter: EventEmitter, event: Event, maxBuffer = 100) {
 	const buffer: OnResult<EventEmitter, Event>[] = [];
@@ -187,7 +146,6 @@ export function handleOn<
 		// Resolve all pending consumers with done
 		while (pending.length > 0) {
 			const resolve = pending.shift();
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 			resolve?.({ value: undefined as any, done: true });
 		}
 	};
@@ -197,7 +155,6 @@ export function handleOn<
 			async next() {
 				// If already disposed, return done
 				if (done) {
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 					return { value: undefined as any, done: true };
 				}
 
@@ -217,7 +174,7 @@ export function handleOn<
 
 			return() {
 				dispose();
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 				return Promise.resolve({ value: undefined as any, done: true });
 			},
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Fn } from "~/types";
-import { handleOn, handleOnce, type Off, type On, type Once } from "./handlers";
+import { on, once, type HasOff, type HasOn, type HasOnce } from "./handlers";
 
 describe("handleOnce", () => {
 	type EventMap = {
@@ -9,8 +9,8 @@ describe("handleOnce", () => {
 		voidEvent: () => void;
 	};
 
-	type TestEmitter = Off &
-		Once & {
+	type TestEmitter = HasOff &
+		HasOnce & {
 			once(event: "stringEvent", handler: EventMap["stringEvent"]): void;
 			once(event: "tupleEvent", handler: EventMap["tupleEvent"]): void;
 			once(event: "voidEvent", handler: EventMap["voidEvent"]): void;
@@ -35,7 +35,7 @@ describe("handleOnce", () => {
 
 	it("resolves with the single handler argument", async () => {
 		const { emitter, handlers, off } = createEmitter();
-		const disposable = handleOnce(emitter, "stringEvent");
+		const disposable = once(emitter, "stringEvent");
 		const handler = handlers.get("stringEvent") as (value: string) => void;
 		expect(handler).toBeTypeOf("function");
 
@@ -49,7 +49,7 @@ describe("handleOnce", () => {
 
 	it("resolves with a tuple when handler has multiple parameters", async () => {
 		const { emitter, handlers } = createEmitter();
-		const disposable = handleOnce(emitter, "tupleEvent");
+		const disposable = once(emitter, "tupleEvent");
 		const handler = handlers.get("tupleEvent") as (
 			value: number,
 			flag: boolean,
@@ -63,7 +63,7 @@ describe("handleOnce", () => {
 
 	it("resolves to undefined when handler receives no arguments", async () => {
 		const { emitter, handlers } = createEmitter();
-		const disposable = handleOnce(emitter, "voidEvent");
+		const disposable = once(emitter, "voidEvent");
 		const handler = handlers.get("voidEvent") as () => void;
 		expect(handler).toBeTypeOf("function");
 
@@ -74,7 +74,7 @@ describe("handleOnce", () => {
 
 	it("removes the listener when disposed before being resolved", () => {
 		const { emitter, handlers, off } = createEmitter();
-		const disposable = handleOnce(emitter, "stringEvent");
+		const disposable = once(emitter, "stringEvent");
 		const handler = handlers.get("stringEvent") as Fn;
 		expect(handler).toBeTypeOf("function");
 
@@ -84,7 +84,7 @@ describe("handleOnce", () => {
 
 	it("rejects with single argument when rejects flag is true", async () => {
 		const { emitter, handlers, off } = createEmitter();
-		const disposable = handleOnce(emitter, "stringEvent", true);
+		const disposable = once(emitter, "stringEvent", true);
 		const handler = handlers.get("stringEvent") as (value: string) => void;
 		expect(handler).toBeTypeOf("function");
 
@@ -98,7 +98,7 @@ describe("handleOnce", () => {
 
 	it("rejects with tuple when rejects flag is true and multiple arguments", async () => {
 		const { emitter, handlers } = createEmitter();
-		const disposable = handleOnce(emitter, "tupleEvent", true);
+		const disposable = once(emitter, "tupleEvent", true);
 		const handler = handlers.get("tupleEvent") as (
 			value: number,
 			flag: boolean,
@@ -115,7 +115,7 @@ describe("handleOnce", () => {
 		let handler: Fn;
 
 		{
-			using disposable = handleOnce(emitter, "stringEvent");
+			using disposable = once(emitter, "stringEvent");
 			handler = handlers.get("stringEvent") as (value: string) => void;
 
 			handler("auto-dispose");
@@ -134,8 +134,8 @@ describe("handleOn", () => {
 		tupleEvent: (x: number, y: number) => void;
 	};
 
-	type TestEmitter = Off &
-		On & {
+	type TestEmitter = HasOff &
+		HasOn & {
 			on(event: "stringEvent", handler: EventMap["stringEvent"]): void;
 			on(event: "numberEvent", handler: EventMap["numberEvent"]): void;
 			on(event: "tupleEvent", handler: EventMap["tupleEvent"]): void;
@@ -178,7 +178,7 @@ describe("handleOn", () => {
 
 	it("yields events as they are emitted", async () => {
 		const { emitter, emit } = createEmitter();
-		const iterator = handleOn(emitter, "stringEvent");
+		const iterator = on(emitter, "stringEvent");
 
 		emit("stringEvent", "first");
 		emit("stringEvent", "second");
@@ -194,7 +194,7 @@ describe("handleOn", () => {
 
 	it("buffers events when no consumer is waiting", async () => {
 		const { emitter, emit } = createEmitter();
-		const iterator = handleOn(emitter, "numberEvent");
+		const iterator = on(emitter, "numberEvent");
 
 		// Emit multiple events before consuming
 		emit("numberEvent", 1);
@@ -211,7 +211,7 @@ describe("handleOn", () => {
 
 	it("drops oldest events when buffer exceeds maxBuffer", async () => {
 		const { emitter, emit } = createEmitter();
-		const iterator = handleOn(emitter, "numberEvent", 3);
+		const iterator = on(emitter, "numberEvent", 3);
 
 		// Emit more events than buffer size
 		emit("numberEvent", 1);
@@ -229,7 +229,7 @@ describe("handleOn", () => {
 
 	it("yields tuples for handlers with multiple parameters", async () => {
 		const { emitter, emit } = createEmitter();
-		const iterator = handleOn(emitter, "tupleEvent");
+		const iterator = on(emitter, "tupleEvent");
 
 		emit("tupleEvent", 10, 20);
 
@@ -241,7 +241,7 @@ describe("handleOn", () => {
 
 	it("removes listener when disposed", () => {
 		const { emitter, off } = createEmitter();
-		const iterator = handleOn(emitter, "stringEvent");
+		const iterator = on(emitter, "stringEvent");
 
 		iterator[Symbol.dispose]();
 
@@ -252,7 +252,7 @@ describe("handleOn", () => {
 
 	it("returns done after disposal", async () => {
 		const { emitter, emit } = createEmitter();
-		const iterator = handleOn(emitter, "stringEvent");
+		const iterator = on(emitter, "stringEvent");
 
 		emit("stringEvent", "before-dispose");
 		iterator[Symbol.dispose]();
@@ -264,7 +264,7 @@ describe("handleOn", () => {
 
 	it("resolves pending consumers with done on disposal", async () => {
 		const { emitter } = createEmitter();
-		const iterator = handleOn(emitter, "stringEvent");
+		const iterator = on(emitter, "stringEvent");
 
 		// Start waiting for an event
 		const nextPromise = iterator.next();
@@ -279,7 +279,7 @@ describe("handleOn", () => {
 
 	it("can be used with for await...of loop", async () => {
 		const { emitter, emit } = createEmitter();
-		const iterator = handleOn(emitter, "numberEvent");
+		const iterator = on(emitter, "numberEvent");
 
 		// Emit some events
 		emit("numberEvent", 1);
@@ -304,7 +304,7 @@ describe("handleOn", () => {
 		const { emitter, emit, off } = createEmitter();
 
 		{
-			using iterator = handleOn(emitter, "stringEvent");
+			using iterator = on(emitter, "stringEvent");
 			emit("stringEvent", "test" as never);
 
 			const result = await iterator.next();
@@ -317,7 +317,7 @@ describe("handleOn", () => {
 
 	it("handles rapid emission and consumption", async () => {
 		const { emitter, emit } = createEmitter();
-		const iterator = handleOn(emitter, "numberEvent");
+		const iterator = on(emitter, "numberEvent");
 
 		// Interleave emissions and consumptions
 		emit("numberEvent", 1);
