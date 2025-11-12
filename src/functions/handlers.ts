@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { IsLiteral } from "type-fest";
 import type { ExtractParams, Fn, OverLoadFunctions } from "~/types";
-import { toDispose } from "./disposable";
+import { toDisposable } from "./disposable";
 
 export type Subscription = (event: any, handler: Fn) => any;
 
@@ -117,7 +117,7 @@ export function handleOnce<
 		resolve(unpackArray(args) as OnceResult<EventEmitter, Event, Rejects>);
 	};
 	emitter.once(event, handler);
-	return toDispose(promise, () => emitter.off(event, handler));
+	return toDisposable(promise, () => emitter.off(event, handler));
 }
 
 export type OnResult<
@@ -192,7 +192,7 @@ export function handleOn<
 		}
 	};
 
-	return toDispose(
+	return toDisposable(
 		{
 			async next() {
 				// If already disposed, return done

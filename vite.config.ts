@@ -14,17 +14,6 @@ export default defineConfig({
 			formats: ["es"],
 		},
 		target: "es2022",
-		rollupOptions: {
-			external: ["core-js/proposals/explicit-resource-management"],
-			output: {
-				preserveModules: true,
-				preserveModulesRoot: "src",
-				entryFileNames: "[name].js",
-			},
-		},
-	},
-	optimizeDeps: {
-		exclude: ["core-js", "core-js/proposals/explicit-resource-management"],
 	},
 	test: {
 		typecheck: {

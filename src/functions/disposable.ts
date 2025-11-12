@@ -3,9 +3,9 @@ export type DisposeFn<T> = (value: T) => unknown;
 
 /**
  * Object with a Symbol.dispose method for automatic cleanup
- * @see {@link toDispose}
+ * @see {@link toDisposable}
  */
-export type Disposable<T extends object> = ReturnType<typeof toDispose<T>>;
+export type Disposable<T extends object> = ReturnType<typeof toDisposable<T>>;
 
 /**
  * Make a value disposable by adding a Symbol.dispose method
@@ -15,24 +15,31 @@ export type Disposable<T extends object> = ReturnType<typeof toDispose<T>>;
  * @example
  * ```ts
  * // Direct usage with extensible objects
- * const resource = toDispose({ handle: 123 }, (r) => closeHandle(r.handle));
+ * const resource = toDisposable({ handle: 123 }, (r) => closeHandle(r.handle));
  * using handle = resource; // automatically disposed at end of scope
  *
  * // For non-extensible values (primitives, sealed objects, class instances), wrap them:
  * const connection = new WebSocket('ws://localhost');
- * const disposableConnection = toDispose(
+ * const disposableConnection = toDisposable(
  *   { socket: connection },
  *   (wrapped) => wrapped.socket.close()
  * );
  * using conn = disposableConnection;
  * ```
  */
-export function toDispose<T extends object>(value: T, disposeFn: DisposeFn<T>) {
+export function toDisposable<T extends object>(
+	value: T,
+	disposeFn: DisposeFn<T>,
+) {
 	let disposed = false;
+	const originalDispose = (value as any)[Symbol.dispose];
 	return Object.assign(value, {
 		[Symbol.dispose]: () => {
 			if (disposed) return;
 			disposeFn(value);
+			if (typeof originalDispose === "function") {
+				originalDispose.call(value);
+			}
 			disposed = true;
 		},
 	});
@@ -43,10 +50,10 @@ export type AsyncDispose<T> = (value: T) => PromiseLike<unknown>;
 
 /**
  * Object with a Symbol.asyncDispose method for automatic async cleanup
- * @see {@link toAsyncDispose}
+ * @see {@link toAsyncDisposable}
  */
 export type AsyncDisposable<T extends object> = ReturnType<
-	typeof toAsyncDispose<T>
+	typeof toAsyncDisposable<T>
 >;
 
 /**
@@ -57,34 +64,38 @@ export type AsyncDisposable<T extends object> = ReturnType<
  * @example
  * ```ts
  * // Direct usage with extensible objects
- * const resource = toAsyncDispose({ stream: fs.createReadStream('file.txt') }, async (r) => {
+ * const resource = toAsyncDisposable({ stream: fs.createReadStream('file.txt') }, async (r) => {
  *   await r.stream.close();
- *   return r;
  * });
  * await using file = resource; // automatically disposed at end of scope
  *
  * // For non-extensible values (sealed objects, class instances), wrap them:
  * const database = new DatabaseConnection();
- * const disposableDb = toAsyncDispose(
+ * const disposableDb = toAsyncDisposable(
  *   { connection: database },
  *   async (wrapped) => {
  *     await wrapped.connection.close();
- *     return wrapped;
  *   }
  * );
  * await using db = disposableDb;
  * ```
  */
-export function toAsyncDispose<T extends object>(
+export function toAsyncDisposable<T extends object>(
 	value: T,
 	disposeFn: AsyncDispose<T>,
 ) {
 	let disposingPromise: PromiseLike<unknown> | undefined;
+	const originalDispose = (value as any)[Symbol.asyncDispose];
 
 	return Object.assign(value, {
 		[Symbol.asyncDispose]: async () => {
 			if (disposingPromise == null) {
-				disposingPromise = disposeFn(value);
+				disposingPromise = (async () => {
+					await disposeFn(value);
+					if (typeof originalDispose === "function") {
+						await originalDispose.call(value);
+					}
+				})();
 			}
 			await disposingPromise;
 		},

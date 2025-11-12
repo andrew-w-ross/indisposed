@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import { toAsyncDispose, toDispose } from "./disposable";
+import { toAsyncDisposable, toDisposable } from "./disposable";
 
-describe("toDispose", () => {
+describe("toDisposable", () => {
 	it("should call dispose function when Symbol.dispose is invoked", () => {
 		const disposeFn = vi.fn();
 		const resource = { handle: 123 };
 
 		{
-			using disposable = toDispose(resource, disposeFn);
+			using disposable = toDisposable(resource, disposeFn);
 			expect(disposable.handle).toBe(123);
 			expect(disposeFn).not.toHaveBeenCalled();
 		}
@@ -20,7 +20,7 @@ describe("toDispose", () => {
 		const disposeFn = vi.fn();
 		const resource = { handle: 456 };
 
-		const disposable = toDispose(resource, disposeFn);
+		const disposable = toDisposable(resource, disposeFn);
 		disposable[Symbol.dispose]();
 		disposable[Symbol.dispose]();
 		disposable[Symbol.dispose]();
@@ -36,13 +36,13 @@ describe("toDispose", () => {
 			}
 		}
 
-		const connection = new Connection();
+		const connection = Object.seal(new Connection());
 		const disposeFn = vi.fn((wrapped: { conn: Connection }) => {
 			wrapped.conn.close();
 		});
 
 		{
-			using disposable = toDispose({ conn: connection }, disposeFn);
+			using disposable = toDisposable({ conn: connection }, disposeFn);
 			expect(disposable.conn).toBe(connection);
 			expect(connection.closed).toBe(false);
 		}
@@ -55,15 +55,35 @@ describe("toDispose", () => {
 		const resource = { handle: 789, name: "test", getValue: () => 42 };
 		const disposeFn = vi.fn();
 
-		const disposable = toDispose(resource, disposeFn);
+		const disposable = toDisposable(resource, disposeFn);
 
 		expect(disposable.handle).toBe(789);
 		expect(disposable.name).toBe("test");
 		expect(disposable.getValue()).toBe(42);
 	});
+
+	it("should forward already registered dispose handler", () => {
+		const originalDispose = vi.fn();
+		const newDispose = vi.fn();
+		const resource = {
+			handle: 999,
+			[Symbol.dispose]: originalDispose,
+		};
+
+		{
+			using disposable = toDisposable(resource, newDispose);
+			expect(disposable.handle).toBe(999);
+			expect(originalDispose).not.toHaveBeenCalled();
+			expect(newDispose).not.toHaveBeenCalled();
+		}
+
+		expect(newDispose).toHaveBeenCalledOnce();
+		expect(newDispose).toHaveBeenCalledWith(resource);
+		expect(originalDispose).toHaveBeenCalledOnce();
+	});
 });
 
-describe("toAsyncDispose", () => {
+describe("toAsyncDisposable", () => {
 	it("should call async dispose function when Symbol.asyncDispose is invoked", async () => {
 		const disposeFn = vi.fn(async (resource: { stream: string }) => {
 			await Promise.resolve();
@@ -72,7 +92,7 @@ describe("toAsyncDispose", () => {
 		const resource = { stream: "stream-handle" };
 
 		{
-			await using disposable = toAsyncDispose(resource, disposeFn);
+			await using disposable = toAsyncDisposable(resource, disposeFn);
 			expect(disposable.stream).toBe("stream-handle");
 			expect(disposeFn).not.toHaveBeenCalled();
 		}
@@ -88,7 +108,7 @@ describe("toAsyncDispose", () => {
 		});
 		const resource = { stream: "stream-handle" };
 
-		const disposable = toAsyncDispose(resource, disposeFn);
+		const disposable = toAsyncDisposable(resource, disposeFn);
 		await Promise.all([
 			disposable[Symbol.asyncDispose](),
 			disposable[Symbol.asyncDispose](),
@@ -107,14 +127,14 @@ describe("toAsyncDispose", () => {
 			}
 		}
 
-		const database = new DatabaseConnection();
+		const database = Object.seal(new DatabaseConnection());
 		const disposeFn = vi.fn(async (wrapped: { db: DatabaseConnection }) => {
 			await wrapped.db.close();
 			return wrapped;
 		});
 
 		{
-			await using disposable = toAsyncDispose({ db: database }, disposeFn);
+			await using disposable = toAsyncDisposable({ db: database }, disposeFn);
 			expect(disposable.db).toBe(database);
 			expect(database.connected).toBe(true);
 		}
@@ -134,7 +154,7 @@ describe("toAsyncDispose", () => {
 			return r;
 		});
 
-		const disposable = toAsyncDispose(resource, disposeFn);
+		const disposable = toAsyncDisposable(resource, disposeFn);
 
 		expect(disposable.stream).toBe("test-stream");
 		expect(disposable.name).toBe("test");
@@ -151,7 +171,7 @@ describe("toAsyncDispose", () => {
 		});
 		const resource = { stream: "stream" };
 
-		const disposable = toAsyncDispose(resource, disposeFn);
+		const disposable = toAsyncDisposable(resource, disposeFn);
 
 		await expect(disposable[Symbol.asyncDispose]()).rejects.toThrow(
 			"Disposal failed",
@@ -168,7 +188,7 @@ describe("toAsyncDispose", () => {
 		});
 		const resource: ResourceType = { stream: "stream" };
 
-		const disposable = toAsyncDispose(resource, disposeFn);
+		const disposable = toAsyncDisposable(resource, disposeFn);
 
 		// Start multiple concurrent disposals
 		const promises = [
@@ -182,5 +202,30 @@ describe("toAsyncDispose", () => {
 		// Should only call the dispose function once
 		expect(callCount).toBe(1);
 		expect(disposeFn).toHaveBeenCalledOnce();
+	});
+
+	it("should forward already registered async dispose handler", async () => {
+		const originalDispose = vi.fn(async () => {
+			await Promise.resolve();
+		});
+		const newDispose = vi.fn(async (resource: { stream: string }) => {
+			await Promise.resolve();
+			return resource;
+		});
+		const resource = {
+			stream: "stream-999",
+			[Symbol.asyncDispose]: originalDispose,
+		};
+
+		{
+			await using disposable = toAsyncDisposable(resource, newDispose);
+			expect(disposable.stream).toBe("stream-999");
+			expect(originalDispose).not.toHaveBeenCalled();
+			expect(newDispose).not.toHaveBeenCalled();
+		}
+
+		expect(newDispose).toHaveBeenCalledOnce();
+		expect(newDispose).toHaveBeenCalledWith(resource);
+		expect(originalDispose).toHaveBeenCalledOnce();
 	});
 });
