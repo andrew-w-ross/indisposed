@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
-import { toAsyncDispose, toDispose } from './disposable';
+import { describe, expect, it, vi } from "vitest";
+import { toAsyncDispose, toDispose } from "./disposable";
 
-describe('toDispose', () => {
-	it('should call dispose function when Symbol.dispose is invoked', () => {
+describe("toDispose", () => {
+	it("should call dispose function when Symbol.dispose is invoked", () => {
 		const disposeFn = vi.fn();
 		const resource = { handle: 123 };
 
@@ -16,7 +16,7 @@ describe('toDispose', () => {
 		expect(disposeFn).toHaveBeenCalledWith(resource);
 	});
 
-	it('should only dispose once even if called multiple times', () => {
+	it("should only dispose once even if called multiple times", () => {
 		const disposeFn = vi.fn();
 		const resource = { handle: 456 };
 
@@ -28,7 +28,7 @@ describe('toDispose', () => {
 		expect(disposeFn).toHaveBeenCalledOnce();
 	});
 
-	it('should work with wrapped non-extensible values', () => {
+	it("should work with wrapped non-extensible values", () => {
 		class Connection {
 			closed = false;
 			close() {
@@ -51,29 +51,29 @@ describe('toDispose', () => {
 		expect(connection.closed).toBe(true);
 	});
 
-	it('should preserve original object properties', () => {
-		const resource = { handle: 789, name: 'test', getValue: () => 42 };
+	it("should preserve original object properties", () => {
+		const resource = { handle: 789, name: "test", getValue: () => 42 };
 		const disposeFn = vi.fn();
 
 		const disposable = toDispose(resource, disposeFn);
 
 		expect(disposable.handle).toBe(789);
-		expect(disposable.name).toBe('test');
+		expect(disposable.name).toBe("test");
 		expect(disposable.getValue()).toBe(42);
 	});
 });
 
-describe('toAsyncDispose', () => {
-	it('should call async dispose function when Symbol.asyncDispose is invoked', async () => {
+describe("toAsyncDispose", () => {
+	it("should call async dispose function when Symbol.asyncDispose is invoked", async () => {
 		const disposeFn = vi.fn(async (resource: { stream: string }) => {
 			await Promise.resolve();
 			return resource;
 		});
-		const resource = { stream: 'stream-handle' };
+		const resource = { stream: "stream-handle" };
 
 		{
 			await using disposable = toAsyncDispose(resource, disposeFn);
-			expect(disposable.stream).toBe('stream-handle');
+			expect(disposable.stream).toBe("stream-handle");
 			expect(disposeFn).not.toHaveBeenCalled();
 		}
 
@@ -81,12 +81,12 @@ describe('toAsyncDispose', () => {
 		expect(disposeFn).toHaveBeenCalledWith(resource);
 	});
 
-	it('should only dispose once even if called multiple times', async () => {
+	it("should only dispose once even if called multiple times", async () => {
 		const disposeFn = vi.fn(async (resource: { stream: string }) => {
 			await Promise.resolve();
 			return resource;
 		});
-		const resource = { stream: 'stream-handle' };
+		const resource = { stream: "stream-handle" };
 
 		const disposable = toAsyncDispose(resource, disposeFn);
 		await Promise.all([
@@ -98,7 +98,7 @@ describe('toAsyncDispose', () => {
 		expect(disposeFn).toHaveBeenCalledOnce();
 	});
 
-	it('should work with wrapped non-extensible values', async () => {
+	it("should work with wrapped non-extensible values", async () => {
 		class DatabaseConnection {
 			connected = true;
 			async close() {
@@ -123,8 +123,12 @@ describe('toAsyncDispose', () => {
 		expect(database.connected).toBe(false);
 	});
 
-	it('should preserve original object properties', async () => {
-		const resource = { stream: 'test-stream', name: 'test', getValue: () => 42 };
+	it("should preserve original object properties", async () => {
+		const resource = {
+			stream: "test-stream",
+			name: "test",
+			getValue: () => 42,
+		};
 		const disposeFn = vi.fn(async (r: typeof resource) => {
 			await Promise.resolve();
 			return r;
@@ -132,27 +136,29 @@ describe('toAsyncDispose', () => {
 
 		const disposable = toAsyncDispose(resource, disposeFn);
 
-		expect(disposable.stream).toBe('test-stream');
-		expect(disposable.name).toBe('test');
+		expect(disposable.stream).toBe("test-stream");
+		expect(disposable.name).toBe("test");
 		expect(disposable.getValue()).toBe(42);
 
 		await disposable[Symbol.asyncDispose]();
 	});
 
-	it('should handle async disposal errors gracefully', async () => {
-		const error = new Error('Disposal failed');
+	it("should handle async disposal errors gracefully", async () => {
+		const error = new Error("Disposal failed");
 		const disposeFn = vi.fn(async () => {
 			await Promise.resolve();
 			throw error;
 		});
-		const resource = { stream: 'stream' };
+		const resource = { stream: "stream" };
 
 		const disposable = toAsyncDispose(resource, disposeFn);
 
-		await expect(disposable[Symbol.asyncDispose]()).rejects.toThrow('Disposal failed');
+		await expect(disposable[Symbol.asyncDispose]()).rejects.toThrow(
+			"Disposal failed",
+		);
 	});
 
-	it('should reuse the same disposal promise for concurrent calls', async () => {
+	it("should reuse the same disposal promise for concurrent calls", async () => {
 		let callCount = 0;
 		type ResourceType = { stream: string };
 		const disposeFn = vi.fn(async (resource: ResourceType) => {
@@ -160,7 +166,7 @@ describe('toAsyncDispose', () => {
 			await new Promise<void>((resolve) => setTimeout(resolve, 50));
 			return resource;
 		});
-		const resource: ResourceType = { stream: 'stream' };
+		const resource: ResourceType = { stream: "stream" };
 
 		const disposable = toAsyncDispose(resource, disposeFn);
 

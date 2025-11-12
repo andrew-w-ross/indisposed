@@ -6,6 +6,7 @@
 	"description": "The missing utilities for disposable resources.",
 	"devDependencies": {
 		"core-js": "^3.46.0",
+		"prettier": "^3.6.2",
 		"typescript": "^5.9.3",
 		"vite": "^7.2.2",
 		"vite-tsconfig-paths": "^5.1.4",
@@ -61,7 +62,9 @@
 		"build:vite": "vite build",
 		"build": "yarn clean && yarn build:vite & yarn build:types",
 		"test": "vitest run",
-		"test:watch": "vitest"
+		"test:watch": "vitest",
+		"format": "prettier --write .",
+		"format:check": "prettier --check ."
 	},
 	"sideEffects": [
 		"./src/polyfill.ts"

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { IsLiteral } from 'type-fest';
-import type { ExtractParams, Fn, OverLoadFunctions } from '~/types';
-import { toDispose } from './disposable';
+import type { IsLiteral } from "type-fest";
+import type { ExtractParams, Fn, OverLoadFunctions } from "~/types";
+import { toDispose } from "./disposable";
 
 export type Subscription = (event: any, handler: Fn) => any;
 
@@ -28,23 +28,25 @@ export type Once = {
 
 type NakedEventNames<Parameters> = Parameters extends [infer E, ...unknown[]]
 	? IsLiteral<E> extends true
-	? E
-	: never
+		? E
+		: never
 	: never;
 
-export type EventNames<Functions> = NakedEventNames<Parameters<OverLoadFunctions<Functions>>>;
+export type EventNames<Functions> = NakedEventNames<
+	Parameters<OverLoadFunctions<Functions>>
+>;
 
 //Leave this type as
 type DistributeParams<Parameters, Event> = Parameters extends unknown
 	? Parameters extends [Event, infer Handler]
-	? ExtractParams<Handler> extends infer P
-	? P extends any[]
-	? any[] extends P
-	? never
-	: P
-	: never
-	: never
-	: never
+		? ExtractParams<Handler> extends infer P
+			? P extends any[]
+				? any[] extends P
+					? never
+					: P
+				: never
+			: never
+		: never
 	: never;
 
 export type EventHandlerParams<Functions, Event> = DistributeParams<
@@ -52,11 +54,11 @@ export type EventHandlerParams<Functions, Event> = DistributeParams<
 	Event
 >;
 
-type UnpackArray<T extends unknown[]> = T['length'] extends 0
+type UnpackArray<T extends unknown[]> = T["length"] extends 0
 	? undefined
-	: T['length'] extends 1
-	? T[0]
-	: T;
+	: T["length"] extends 1
+		? T[0]
+		: T;
 
 function unpackArray<T extends unknown[]>(values: T) {
 	return (
@@ -66,9 +68,11 @@ function unpackArray<T extends unknown[]>(values: T) {
 
 export type OnceResult<
 	EventEmitter extends Once,
-	Event extends EventNames<EventEmitter['once']>,
+	Event extends EventNames<EventEmitter["once"]>,
 	Rejects extends boolean,
-> = Rejects extends true ? never : UnpackArray<EventHandlerParams<EventEmitter['once'], Event>>;
+> = Rejects extends true
+	? never
+	: UnpackArray<EventHandlerParams<EventEmitter["once"], Event>>;
 
 /**
  * Type-safe wrapper for event emitter's `once` method that preserves overload signatures.
@@ -99,7 +103,7 @@ export type OnceResult<
  */
 export function handleOnce<
 	EventEmitter extends Once,
-	const Event extends EventNames<EventEmitter['once']>,
+	const Event extends EventNames<EventEmitter["once"]>,
 	const Rejects extends boolean = false,
 >(emitter: EventEmitter, event: Event, rejects?: Rejects) {
 	const { promise, resolve, reject } =
@@ -118,8 +122,8 @@ export function handleOnce<
 
 export type OnResult<
 	EventEmitter extends On,
-	Event extends EventNames<EventEmitter['on']>,
-> = UnpackArray<EventHandlerParams<EventEmitter['on'], Event>>;
+	Event extends EventNames<EventEmitter["on"]>,
+> = UnpackArray<EventHandlerParams<EventEmitter["on"], Event>>;
 
 /**
  * Type-safe wrapper for event emitter's `on` method that returns an async iterator.
@@ -148,10 +152,12 @@ export type OnResult<
  */
 export function handleOn<
 	EventEmitter extends On,
-	const Event extends EventNames<EventEmitter['on']>,
+	const Event extends EventNames<EventEmitter["on"]>,
 >(emitter: EventEmitter, event: Event, maxBuffer = 100) {
 	const buffer: OnResult<EventEmitter, Event>[] = [];
-	const pending: ((value: IteratorResult<OnResult<EventEmitter, Event>>) => void)[] = [];
+	const pending: ((
+		value: IteratorResult<OnResult<EventEmitter, Event>>,
+	) => void)[] = [];
 	let done = false;
 
 	const handler: Fn = (...args: unknown[]) => {
@@ -202,9 +208,11 @@ export function handleOn<
 				}
 
 				// Wait for the next event
-				return new Promise<IteratorResult<OnResult<EventEmitter, Event>>>((resolve) => {
-					pending.push(resolve);
-				});
+				return new Promise<IteratorResult<OnResult<EventEmitter, Event>>>(
+					(resolve) => {
+						pending.push(resolve);
+					},
+				);
 			},
 
 			return() {
@@ -217,6 +225,6 @@ export function handleOn<
 				return this;
 			},
 		} satisfies AsyncIterableIterator<OnResult<EventEmitter, Event>>,
-		dispose
+		dispose,
 	);
 }

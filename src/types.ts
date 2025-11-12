@@ -19,16 +19,16 @@ export type OverLoadFunctions<FunctionType> = FunctionType extends {
 	(...args: infer A10): infer R10;
 }
 	?
-	| ((...p: A1) => R1)
-	| ((...p: A2) => R2)
-	| ((...p: A3) => R3)
-	| ((...p: A4) => R4)
-	| ((...p: A5) => R5)
-	| ((...p: A6) => R6)
-	| ((...p: A7) => R7)
-	| ((...p: A8) => R8)
-	| ((...p: A9) => R9)
-	| ((...p: A10) => R10)
+			| ((...p: A1) => R1)
+			| ((...p: A2) => R2)
+			| ((...p: A3) => R3)
+			| ((...p: A4) => R4)
+			| ((...p: A5) => R5)
+			| ((...p: A6) => R6)
+			| ((...p: A7) => R7)
+			| ((...p: A8) => R8)
+			| ((...p: A9) => R9)
+			| ((...p: A10) => R10)
 	: never;
 
 export type ExtractParams<T> = T extends (...args: infer P) => any ? P : never;

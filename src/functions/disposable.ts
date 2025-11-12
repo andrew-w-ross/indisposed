@@ -45,7 +45,9 @@ export type AsyncDispose<T> = (value: T) => PromiseLike<unknown>;
  * Object with a Symbol.asyncDispose method for automatic async cleanup
  * @see {@link toAsyncDispose}
  */
-export type AsyncDisposable<T extends object> = ReturnType<typeof toAsyncDispose<T>>;
+export type AsyncDisposable<T extends object> = ReturnType<
+	typeof toAsyncDispose<T>
+>;
 
 /**
  * Make a value async disposable by adding a Symbol.asyncDispose method
@@ -73,7 +75,10 @@ export type AsyncDisposable<T extends object> = ReturnType<typeof toAsyncDispose
  * await using db = disposableDb;
  * ```
  */
-export function toAsyncDispose<T extends object>(value: T, disposeFn: AsyncDispose<T>) {
+export function toAsyncDispose<T extends object>(
+	value: T,
+	disposeFn: AsyncDispose<T>,
+) {
 	let disposingPromise: PromiseLike<unknown> | undefined;
 
 	return Object.assign(value, {

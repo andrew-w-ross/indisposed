@@ -4,12 +4,7 @@
 		"moduleResolution": "bundler",
 		"target": "ES2023",
 		"types": [],
-		"lib": [
-			"ES2023",
-			"ESNext.disposable",
-			"ES2024.Promise",
-			"WebWorker"
-		],
+		"lib": ["ES2023", "ESNext.disposable", "ES2024.Promise", "WebWorker"],
 		"strict": true,
 		"noUncheckedIndexedAccess": true,
 		"useUnknownInCatchVariables": true,
@@ -26,9 +21,7 @@
 		"resolveJsonModule": true,
 		"baseUrl": ".",
 		"paths": {
-			"~/*": [
-				"${configDir}/src/*"
-			]
+			"~/*": ["${configDir}/src/*"]
 		}
 	}
 }

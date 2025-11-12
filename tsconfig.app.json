@@ -10,9 +10,7 @@
 		"outDir": "${configDir}/dist",
 		"tsBuildInfoFile": "${configDir}/node_modules/.cache/tsbuildinfo/tsconfig.app.tsbuildinfo"
 	},
-	"include": [
-		"${configDir}/src/**/*.ts"
-	],
+	"include": ["${configDir}/src/**/*.ts"],
 	"exclude": [
 		"${configDir}/src/**/*.test.ts",
 		"${configDir}/src/**/*.spec.ts",
