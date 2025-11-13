@@ -7,6 +7,26 @@ export type DisposeFn<T> = (value: T) => unknown;
  */
 export type Disposable<T extends object> = ReturnType<typeof toDisposable<T>>;
 
+function hasDisposable(
+	value: unknown,
+): value is { [Symbol.dispose]: () => unknown } {
+	return (
+		value != null &&
+		typeof value === "object" &&
+		typeof (value as any)[Symbol.dispose] === "function"
+	);
+}
+
+function hasAsyncDisposable(
+	value: unknown,
+): value is { [Symbol.asyncDispose]: () => PromiseLike<unknown> } {
+	return (
+		value != null &&
+		typeof value === "object" &&
+		typeof (value as any)[Symbol.asyncDispose] === "function"
+	);
+}
+
 /**
  * Make a value disposable by adding a Symbol.dispose method
  * @param value item to make disposable (must be an extensible object)
@@ -32,14 +52,17 @@ export function toDisposable<T extends object>(
 	disposeFn: DisposeFn<T>,
 ) {
 	let disposed = false;
-	const originalDispose = (value as any)[Symbol.dispose];
+
+	const originalDispose = hasDisposable(value)
+		? value[Symbol.dispose]
+		: undefined;
+
 	return Object.assign(value, {
 		[Symbol.dispose]: () => {
 			if (disposed) return;
+
 			disposeFn(value);
-			if (typeof originalDispose === "function") {
-				originalDispose.call(value);
-			}
+			originalDispose?.call(value);
 			disposed = true;
 		},
 	});
@@ -85,16 +108,16 @@ export function toAsyncDisposable<T extends object>(
 	disposeFn: AsyncDispose<T>,
 ) {
 	let disposingPromise: PromiseLike<unknown> | undefined;
-	const originalDispose = (value as any)[Symbol.asyncDispose];
+	const originalDispose = hasAsyncDisposable(value)
+		? value[Symbol.asyncDispose]
+		: undefined;
 
 	return Object.assign(value, {
 		[Symbol.asyncDispose]: async () => {
 			if (disposingPromise == null) {
 				disposingPromise = (async () => {
 					await disposeFn(value);
-					if (typeof originalDispose === "function") {
-						await originalDispose.call(value);
-					}
+					await originalDispose?.call(value);
 				})();
 			}
 			await disposingPromise;

@@ -11,17 +11,22 @@ export function unpackArray<T extends unknown[]>(values: T) {
 }
 
 /**
- * Utility just invokes the method being called immediatly.
+ * Utility just invokes the method being called immediately.
  * Useful to scope resources to calling body.
- * @param fn
+ * @param fn Function to invoke
  * @returns Result of fn
  * @example
  * ```ts
- * import {invoke, once} from "indisposed";
+ * import {invoke, once, toAsyncDisposable} from "indisposed";
  * import {WebSocketServer} from "ws";
  *
- * await invoke(async () => {
- * 	const wss = new WebSocketServer({ host: '127.0.0.1', port: 0 });
+ * await using wss = await invoke(async () => {
+ * 	const wss = toAsyncDisposable(
+ * 		new WebSocketServer({ host: '127.0.0.1', port: 0 }),
+ * 		(wss) => new Promise((resolve, reject) => {
+ * 			wss.close((err) => err ? reject(err) : resolve(undefined));
+ * 		})
+ * 	);
  * 	using listening = once(wss, 'listening');
  * 	using error = once(wss, 'error', true);
  *
@@ -29,6 +34,7 @@ export function unpackArray<T extends unknown[]>(values: T) {
  *
  * 	return wss;
  * });
+ * // wss is automatically closed here
  * ```
  */
 export function invoke<TResult>(fn: () => TResult) {
