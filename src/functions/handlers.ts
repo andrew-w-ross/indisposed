@@ -36,6 +36,11 @@ export type OnceResult<
 /**
  * Type-safe wrapper for event emitter's `once` method that preserves overload signatures.
  *
+ * The return value is automatically unpacked:
+ * - Handlers with 0 parameters resolve to `undefined`
+ * - Handlers with 1 parameter resolve to that single value
+ * - Handlers with 2+ parameters resolve to an array of values
+ *
  * @param emitter - Event emitter with `once` and `off` methods
  * @param event - Event name (must match one of the emitter's overloads)
  * @param rejects - When true, the promise rejects with the handler arguments instead of resolving
@@ -46,18 +51,19 @@ export type OnceResult<
  * type MyEmitter = {
  *   once(event: 'data', handler: (value: string) => void): void;
  *   once(event: 'error', handler: (error: Error) => void): number;
+ *   once(event: 'multi', handler: (x: number, y: number) => void): void;
  *   off(event: string, handler: Fn): void;
  * };
  *
  * declare const emitter: MyEmitter;
  *
- * // Type-safe: 'value' is inferred as string
- * using result = handleOnce(emitter, 'data');
- * console.log((await result).toUpperCase());
+ * // Single parameter: returns the value directly
+ * using result = once(emitter, 'data');
+ * console.log((await result).toUpperCase()); // string
  *
- * // Return type is inferred as number
- * const value = await handleOnce(emitter, 'error');
- * console.error(value.message);
+ * // Multiple parameters: returns as array
+ * using coords = once(emitter, 'multi');
+ * const [x, y] = await coords; // [number, number]
  * ```
  */
 export function once<
@@ -87,6 +93,11 @@ export type OnResult<
 /**
  * Type-safe wrapper for event emitter's `on` method that returns an async iterator.
  *
+ * The yielded values are automatically unpacked:
+ * - Handlers with 0 parameters yield `undefined`
+ * - Handlers with 1 parameter yield that single value
+ * - Handlers with 2+ parameters yield an array of values
+ *
  * @param emitter - Event emitter with `on` and `off` methods
  * @param event - Event name (must match one of the emitter's overloads)
  * @param maxBuffer - Maximum number of events to buffer (default: 100)
@@ -96,16 +107,22 @@ export type OnResult<
  * ```ts
  * type MyEmitter = {
  *   on(event: 'data', handler: (value: string) => void): void;
- *   on(event: 'error', handler: (error: Error) => void): void;
+ *   on(event: 'position', handler: (x: number, y: number) => void): void;
  *   off(event: string, handler: Fn): void;
  * };
  *
  * declare const emitter: MyEmitter;
  *
- * // Type-safe: 'value' is inferred as string
- * using iterator = handleOn(emitter, 'data');
+ * // Single parameter: yields values directly
+ * using iterator = on(emitter, 'data');
  * for await (const value of iterator) {
- *   console.log(value.toUpperCase());
+ *   console.log(value.toUpperCase()); // string
+ * }
+ *
+ * // Multiple parameters: yields as array
+ * using positions = on(emitter, 'position');
+ * for await (const [x, y] of positions) {
+ *   console.log(`Position: ${x}, ${y}`);
  * }
  * ```
  */
@@ -113,75 +130,77 @@ export function on<
 	EventEmitter extends HasOn,
 	const Event extends EventNames<EventEmitter["on"]>,
 >(emitter: EventEmitter, event: Event, maxBuffer = 100) {
-	const buffer: OnResult<EventEmitter, Event>[] = [];
-	const pending: ((
-		value: IteratorResult<OnResult<EventEmitter, Event>>,
-	) => void)[] = [];
+	type Item = OnResult<EventEmitter, Event>;
+	type IterationResult = IteratorResult<Item, undefined>;
+
 	let done = false;
+	const events: Item[] = [];
+	const waiters: ((value: IterationResult) => void)[] = [];
 
-	const handler: Fn = (...args: unknown[]) => {
-		const value = unpackArray(args) as OnResult<EventEmitter, Event>;
+	const doneResult = () => ({
+		value: undefined,
+		done: true as const,
+	});
 
-		// If there's a pending consumer, resolve immediately
-		const resolve = pending.shift();
-		if (resolve) {
+	const drain = () => {
+		// Pair off as many as possible, FIFO ↔ FIFO
+		while (!done && events.length && waiters.length) {
+			const value = events.shift()!;
+			const resolve = waiters.shift()!;
 			resolve({ value, done: false });
-			return;
 		}
+	};
 
-		// Otherwise buffer the event (drop oldest if at capacity)
-		if (buffer.length >= maxBuffer) {
-			buffer.shift();
+	const handler = (...args: unknown[]) => {
+		if (done) return;
+		const value = unpackArray(args) as Item;
+
+		if (maxBuffer <= 0) {
+			if (waiters.length) events.push(value); // only deliver to waiters
+		} else {
+			events.push(value);
+			if (events.length > maxBuffer) events.shift();
 		}
-		buffer.push(value);
+		drain();
 	};
 
 	emitter.on(event, handler);
 
 	const dispose = () => {
 		if (done) return;
-		done = true;
 		emitter.off(event, handler);
+		done = true;
 
-		// Resolve all pending consumers with done
-		while (pending.length > 0) {
-			const resolve = pending.shift();
-			resolve?.({ value: undefined as any, done: true });
+		while (waiters.length > 0) {
+			const waiter = waiters.shift();
+			waiter?.(doneResult());
 		}
 	};
 
-	return toDisposable(
-		{
-			async next() {
-				// If already disposed, return done
-				if (done) {
-					return { value: undefined as any, done: true };
-				}
+	const iterator: AsyncIterableIterator<Item, undefined, void> = {
+		async next() {
+			// If already disposed, return done
+			if (done) {
+				return doneResult();
+			}
 
-				// If buffer has events, return the oldest one
-				if (buffer.length > 0) {
-					const value = buffer.shift()!;
-					return { value, done: false };
-				}
+			if (events.length)
+				return { value: events.shift()!, done: false } as const;
 
-				// Wait for the next event
-				return new Promise<IteratorResult<OnResult<EventEmitter, Event>>>(
-					(resolve) => {
-						pending.push(resolve);
-					},
-				);
-			},
+			// Wait for the next event
+			return new Promise<IterationResult>((resolve) => {
+				waiters.push(resolve);
+				drain();
+			});
+		},
+		return() {
+			dispose();
+			return Promise.resolve(doneResult());
+		},
+		[Symbol.asyncIterator]() {
+			return this;
+		},
+	};
 
-			return() {
-				dispose();
-
-				return Promise.resolve({ value: undefined as any, done: true });
-			},
-
-			[Symbol.asyncIterator]() {
-				return this;
-			},
-		} satisfies AsyncIterableIterator<OnResult<EventEmitter, Event>>,
-		dispose,
-	);
+	return toDisposable(iterator, dispose);
 }

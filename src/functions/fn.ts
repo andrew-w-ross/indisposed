@@ -20,21 +20,30 @@ export function unpackArray<T extends unknown[]>(values: T) {
  * import {invoke, once, toAsyncDisposable} from "indisposed";
  * import {WebSocketServer} from "ws";
  *
- * await using wss = await invoke(async () => {
- * 	const wss = toAsyncDisposable(
- * 		new WebSocketServer({ host: '127.0.0.1', port: 0 }),
- * 		(wss) => new Promise((resolve, reject) => {
- * 			wss.close((err) => err ? reject(err) : resolve(undefined));
- * 		})
- * 	);
- * 	using listening = once(wss, 'listening');
- * 	using error = once(wss, 'error', true);
+ * {
+ * 	await using wss = await invoke(async () => {
+ * 		const wss = toAsyncDisposable(
+ * 			new WebSocketServer({ host: "127.0.0.1", port: 0 }),
+ * 			(wss) =>
+ * 				new Promise((resolve, reject) => {
+ * 					wss.close((err) => {
+ * 						if (err) return reject(err);
+ * 						resolve(undefined);
+ * 					});
+ * 				}),
+ * 		);
+ * 		using listening = once(wss, "listening");
+ * 		using error = once(wss, "error", true);
  *
- * 	await Promise.race([listening, error]);
+ * 		await Promise.race([listening, error]);
  *
- * 	return wss;
- * });
- * // wss is automatically closed here
+ * 		return wss;
+ * 	});
+ *
+ * 	console.log("Server ready at", wss.address());
+ * 	// ... handle connections ...
+ * }
+ * // wss is automatically closed once the scope ends
  * ```
  */
 export function invoke<TResult>(fn: () => TResult) {

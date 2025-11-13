@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Fn } from "~/types";
 import { on, once, type HasOff, type HasOn, type HasOnce } from "./handlers";
 
-describe("handleOnce", () => {
+describe("once", () => {
 	type EventMap = {
 		stringEvent: (value: string) => void;
 		tupleEvent: (value: number, flag: boolean) => void;
@@ -127,7 +127,7 @@ describe("handleOnce", () => {
 	});
 });
 
-describe("handleOn", () => {
+describe("on", () => {
 	type EventMap = {
 		stringEvent: (value: string) => void;
 		numberEvent: (value: number) => void;
