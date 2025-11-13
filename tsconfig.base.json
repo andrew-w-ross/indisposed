@@ -1,0 +1,27 @@
+{
+	"compilerOptions": {
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"target": "ES2023",
+		"types": [],
+		"lib": ["ES2023", "ESNext.disposable", "ES2024.Promise", "WebWorker"],
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"useUnknownInCatchVariables": true,
+		"noImplicitOverride": true,
+		"noFallthroughCasesInSwitch": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"moduleDetection": "force",
+		"skipLibCheck": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"noUncheckedSideEffectImports": true,
+		"resolveJsonModule": true,
+		"baseUrl": ".",
+		"paths": {
+			"~/*": ["${configDir}/src/*"]
+		}
+	}
+}

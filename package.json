@@ -1,0 +1,78 @@
+{
+	"author": "andrew-w-ross",
+	"bugs": {
+		"url": "https://github.com/andrew-w-ross/indisposed/issues"
+	},
+	"description": "The missing utilities for disposable resources.",
+	"devDependencies": {
+		"@types/ws": "^8.18.1",
+		"core-js": "^3.46.0",
+		"prettier": "^3.6.2",
+		"typescript": "^5.9.3",
+		"vite": "^7.2.2",
+		"vite-tsconfig-paths": "^5.1.4",
+		"vitest": "^4.0.8",
+		"ws": "^8.18.3"
+	},
+	"engines": {
+		"node": ">=22.20.0"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"development": "./src/index.ts",
+			"default": "./dist/index.js"
+		},
+		"./no-polyfill": {
+			"types": "./dist/no-polyfill.d.ts",
+			"development": "./src/no-polyfill.ts",
+			"default": "./dist/no-polyfill.js"
+		}
+	},
+	"homepage": "https://github.com/andrew-w-ross/indisposed#readme",
+	"keywords": [
+		"disposable",
+		"dispose",
+		"cleanup",
+		"resource-management",
+		"lifecycle",
+		"teardown",
+		"async-iterator",
+		"async-iterable",
+		"event-handler",
+		"event-to-iterator",
+		"iterator-utils",
+		"utilities",
+		"typescript"
+	],
+	"license": "MIT",
+	"name": "indisposed",
+	"packageManager": "yarn@4.11.0",
+	"peerDependencies": {
+		"core-js": "^3.46.0"
+	},
+	"peerDependenciesMeta": {
+		"core-js": {
+			"optional": true
+		}
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/andrew-w-ross/indisposed.git"
+	},
+	"scripts": {
+		"clean": "rm -rf node_modules/.cache/tsbuildinfo/ & rm -rf dist/ && mkdir -p dist",
+		"build:types": "tsc -b tsconfig.json",
+		"build:vite": "vite build",
+		"build": "yarn build:vite & yarn build:types",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"format": "prettier --write .",
+		"format:check": "prettier --check ."
+	},
+	"sideEffects": [
+		"./src/polyfill.ts"
+	],
+	"type": "module",
+	"version": "0.0.1"
+}

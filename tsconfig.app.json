@@ -1,0 +1,19 @@
+{
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"composite": true,
+		"declaration": true,
+		"declarationMap": true,
+		"emitDeclarationOnly": true,
+		"sourceMap": false,
+		"rootDir": "${configDir}/src",
+		"outDir": "${configDir}/dist",
+		"tsBuildInfoFile": "${configDir}/node_modules/.cache/tsbuildinfo/tsconfig.app.tsbuildinfo"
+	},
+	"include": ["${configDir}/src/**/*.ts"],
+	"exclude": [
+		"${configDir}/src/**/*.test.ts",
+		"${configDir}/src/**/*.spec.ts",
+		"${configDir}/src/**/*.test-d.ts"
+	]
+}
