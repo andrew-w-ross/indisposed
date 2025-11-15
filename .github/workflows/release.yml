@@ -1,28 +1,59 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      prerelease:
+        description: "Is this a prerelease?"
+        required: false
+        type: boolean
+        default: false
+      release_notes:
+        description: "Optional release notes (Markdown). Leave blank to auto-generate."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: write
-  id-token: write
+  id-token: write # OIDC for npm Trusted Publishing
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
 
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    environment: release
 
     steps:
-      - name: Checkout
+      - name: Checkout (full history)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure up-to-date main & tags
+        run: |
+          git fetch origin main --tags
+          git checkout -B release-tmp origin/main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
           registry-url: "https://registry.npmjs.org"
+          cache: yarn
 
       - name: Enable Corepack
         run: corepack enable
@@ -36,5 +67,70 @@ jobs:
       - name: Run tests
         run: yarn test
 
-      - name: Publish to npm
-        run: yarn npm publish --access public --provenance
+      - name: Configure Git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version and create tag
+        id: version
+        env:
+          VERSION_TYPE: ${{ github.event.inputs.version_type }}
+          PRERELEASE: ${{ github.event.inputs.prerelease }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "$PRERELEASE" = "true" ]; then
+            BUMP_TYPE="pre${VERSION_TYPE}"
+          else
+            BUMP_TYPE="$VERSION_TYPE"
+          fi
+
+          yarn version "$BUMP_TYPE" --immediate
+
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          TAG="v$NEW_VERSION"
+
+          # Fail if tag already exists on origin
+          if git ls-remote --tags origin "$TAG" | grep -q "$TAG$"; then
+            echo "Tag $TAG already exists on origin. Aborting."
+            exit 1
+          fi
+
+          echo "value=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to npm (Trusted Publishing)
+        env:
+          IS_PRERELEASE: ${{ steps.version.outputs.is_prerelease }}
+        run: |
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            yarn npm publish --access public --tag next
+          else
+            yarn npm publish --access public
+          fi
+
+      - name: Push version commit and tag (FF onto main)
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          # Ensure we still fast-forward onto latest main
+          git fetch origin main
+          git rebase origin/main
+          git push --force-with-lease origin HEAD:main
+          git push origin "$TAG"
+
+      - name: Create GitHub release
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_NOTES: ${{ github.event.inputs.release_notes }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          if [ -n "$RELEASE_NOTES" ]; then
+            printf "%s" "$RELEASE_NOTES" > release-notes.txt
+            gh release create "$TAG" --title "$TAG" --notes-file release-notes.txt --verify-tag
+          else
+            gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
+          fi
