@@ -22,6 +22,11 @@ on:
         required: false
         type: string
         default: ""
+      tolerate_republish:
+        description: "Allow republishing if version already exists on npm"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -48,15 +53,14 @@ jobs:
           git fetch origin main --tags
           git checkout -B release-tmp origin/main
 
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          registry-url: "https://registry.npmjs.org"
           cache: yarn
-
-      - name: Enable Corepack
-        run: corepack enable
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -105,17 +109,28 @@ jobs:
       - name: Publish to npm (Trusted Publishing)
         env:
           IS_PRERELEASE: ${{ steps.version.outputs.is_prerelease }}
+          TOLERATE_REPUBLISH: ${{ github.event.inputs.tolerate_republish }}
         run: |
+          PUBLISH_FLAGS="--access public"
+
           if [ "$IS_PRERELEASE" = "true" ]; then
-            yarn npm publish --access public --tag next
-          else
-            yarn npm publish --access public
+            PUBLISH_FLAGS="$PUBLISH_FLAGS --tag next"
           fi
+
+          if [ "$TOLERATE_REPUBLISH" = "true" ]; then
+            PUBLISH_FLAGS="$PUBLISH_FLAGS --tolerate-republish"
+          fi
+
+          yarn npm publish $PUBLISH_FLAGS
 
       - name: Push version commit and tag (FF onto main)
         env:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
+          # Commit the version bump
+          git add -A
+          git commit -m "chore: release $TAG"
+
           # Ensure we still fast-forward onto latest main
           git fetch origin main
           git rebase origin/main
