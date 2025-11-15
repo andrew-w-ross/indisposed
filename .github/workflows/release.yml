@@ -3,12 +3,17 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      release_version:
-        description: "Optional semver (e.g. 1.2.3). Leave blank to bump patch."
-        required: false
-        default: ""
-      pre_release:
-        description: "Mark as prerelease (bumps prerelease when no version supplied, publishes with next tag)"
+      version_type:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      prerelease:
+        description: "Is this a prerelease?"
         required: false
         type: boolean
         default: false
@@ -30,6 +35,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    environment: release
 
     steps:
       - name: Checkout (full history)
@@ -66,27 +72,25 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Compute next version and check remote tag
+      - name: Bump version and create tag
         id: version
         env:
-          INPUT_VERSION: ${{ github.event.inputs.release_version }}
-          PRE_RELEASE: ${{ github.event.inputs.pre_release }}
+          VERSION_TYPE: ${{ github.event.inputs.version_type }}
+          PRERELEASE: ${{ github.event.inputs.prerelease }}
         shell: bash
         run: |
           set -euo pipefail
 
-          # Resolve desired version number (no leading v)
-          if [ -n "${INPUT_VERSION}" ]; then
-            CLEAN="${INPUT_VERSION#v}"
-          elif [ "${PRE_RELEASE}" = "true" ]; then
-            CURRENT=$(node -p "require('./package.json').version")
-            CLEAN=$(node -p "require('semver').inc(process.argv[1],'prerelease','rc')" "$CURRENT")
+          if [ "$PRERELEASE" = "true" ]; then
+            BUMP_TYPE="pre${VERSION_TYPE}"
           else
-            CURRENT=$(node -p "require('./package.json').version")
-            CLEAN=$(node -p "require('semver').inc(process.argv[1],'patch')" "$CURRENT")
+            BUMP_TYPE="$VERSION_TYPE"
           fi
 
-          TAG="v$CLEAN"
+          yarn version "$BUMP_TYPE" --immediate
+
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          TAG="v$NEW_VERSION"
 
           # Fail if tag already exists on origin
           if git ls-remote --tags origin "$TAG" | grep -q "$TAG$"; then
@@ -94,20 +98,15 @@ jobs:
             exit 1
           fi
 
-          echo "value=$CLEAN" >> "$GITHUB_OUTPUT"
+          echo "value=$NEW_VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Bump version (annotated tag by npm)
-        env:
-          VERSION: ${{ steps.version.outputs.value }}
-        run: |
-          npm version "$VERSION" -m "chore(release): v%s"
+          echo "is_prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
 
       - name: Publish to npm (Trusted Publishing)
         env:
-          PRE_RELEASE: ${{ github.event.inputs.pre_release }}
+          IS_PRERELEASE: ${{ steps.version.outputs.is_prerelease }}
         run: |
-          if [ "$PRE_RELEASE" = "true" ]; then
+          if [ "$IS_PRERELEASE" = "true" ]; then
             yarn npm publish --access public --tag next
           else
             yarn npm publish --access public
