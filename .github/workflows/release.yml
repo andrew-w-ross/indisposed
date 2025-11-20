@@ -76,7 +76,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Bump version and create tag
+      - name: Bump version and compute tag
         id: version
         env:
           VERSION_TYPE: ${{ github.event.inputs.version_type }}
@@ -94,6 +94,7 @@ jobs:
           yarn version "$BUMP_TYPE" --immediate
 
           NEW_VERSION=$(node -p "require('./package.json').version")
+
           TAG="v$NEW_VERSION"
 
           # Fail if tag already exists on origin
@@ -123,18 +124,21 @@ jobs:
 
           yarn npm publish $PUBLISH_FLAGS
 
-      - name: Push version commit and tag (FF onto main)
+      - name: Commit bump, rebase, and push tag
         env:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
-          # Commit the version bump
           git add -A
-          git commit -m "chore: release $TAG"
 
-          # Ensure we still fast-forward onto latest main
+          if git diff --cached --quiet; then
+            echo "No files to commit (version already current). Continuing with existing commit."
+          else
+            git commit -m "chore: release $TAG"
+          fi
+
           git fetch origin main
           git rebase origin/main
-          git tag "$TAG"
+          git tag -f "$TAG"
           git push --force-with-lease origin HEAD:main
           git push origin "$TAG"
 
