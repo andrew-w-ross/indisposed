@@ -134,6 +134,7 @@ jobs:
           # Ensure we still fast-forward onto latest main
           git fetch origin main
           git rebase origin/main
+          git tag "$TAG"
           git push --force-with-lease origin HEAD:main
           git push origin "$TAG"
 
