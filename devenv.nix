@@ -18,6 +18,11 @@
     corepack.enable = true;
   };
 
+  enterShell = ''
+    # Avoid git warning about incomplete Nix-provided SDK metadata.
+    unset DEVELOPER_DIR
+  '';
+
   # https://devenv.sh/git-hooks/
   # git-hooks.hooks.shellcheck.enable = true;
 

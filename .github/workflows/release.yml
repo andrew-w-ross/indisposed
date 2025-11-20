@@ -22,6 +22,11 @@ on:
         required: false
         type: string
         default: ""
+      tolerate_republish:
+        description: "Allow republishing if version already exists on npm"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -48,15 +53,14 @@ jobs:
           git fetch origin main --tags
           git checkout -B release-tmp origin/main
 
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          registry-url: "https://registry.npmjs.org"
           cache: yarn
-
-      - name: Enable Corepack
-        run: corepack enable
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -72,7 +76,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Bump version and create tag
+      - name: Bump version and compute tag
         id: version
         env:
           VERSION_TYPE: ${{ github.event.inputs.version_type }}
@@ -90,6 +94,7 @@ jobs:
           yarn version "$BUMP_TYPE" --immediate
 
           NEW_VERSION=$(node -p "require('./package.json').version")
+
           TAG="v$NEW_VERSION"
 
           # Fail if tag already exists on origin
@@ -105,20 +110,35 @@ jobs:
       - name: Publish to npm (Trusted Publishing)
         env:
           IS_PRERELEASE: ${{ steps.version.outputs.is_prerelease }}
+          TOLERATE_REPUBLISH: ${{ github.event.inputs.tolerate_republish }}
         run: |
+          PUBLISH_FLAGS="--access public"
+
           if [ "$IS_PRERELEASE" = "true" ]; then
-            yarn npm publish --access public --tag next
-          else
-            yarn npm publish --access public
+            PUBLISH_FLAGS="$PUBLISH_FLAGS --tag next"
           fi
 
-      - name: Push version commit and tag (FF onto main)
+          if [ "$TOLERATE_REPUBLISH" = "true" ]; then
+            PUBLISH_FLAGS="$PUBLISH_FLAGS --tolerate-republish"
+          fi
+
+          yarn npm publish $PUBLISH_FLAGS
+
+      - name: Commit bump, rebase, and push tag
         env:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
-          # Ensure we still fast-forward onto latest main
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No files to commit (version already current). Continuing with existing commit."
+          else
+            git commit -m "chore: release $TAG"
+          fi
+
           git fetch origin main
           git rebase origin/main
+          git tag -f "$TAG"
           git push --force-with-lease origin HEAD:main
           git push origin "$TAG"
 
