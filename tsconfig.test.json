@@ -10,10 +10,5 @@
 		"${configDir}/src/**/*.test.ts",
 		"${configDir}/src/**/*.spec.ts",
 		"${configDir}/src/**/*.test-d.ts"
-	],
-	"references": [
-		{
-			"path": "./tsconfig.app.json"
-		}
 	]
 }
