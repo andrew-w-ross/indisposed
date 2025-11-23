@@ -30,7 +30,7 @@ on:
 
 permissions:
   contents: write
-  id-token: write # OIDC for npm Trusted Publishing
+  id-token: write
 
 concurrency:
   group: release-main
@@ -40,12 +40,15 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    environment: release
+    # 🔒 Only allow this workflow to actually run when dispatched from main
+    if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Checkout (full history)
+      - name: Checkout via deploy key
         uses: actions/checkout@v4
         with:
+          ssh-key: ${{ secrets.CI_DEPLOY_KEY }}
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Ensure up-to-date main & tags
@@ -71,10 +74,10 @@ jobs:
       - name: Run tests
         run: yarn test
 
-      - name: Configure Git user
+      - name: Configure git
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@example.com"
 
       - name: Bump version and compute tag
         id: version
@@ -97,7 +100,6 @@ jobs:
 
           TAG="v$NEW_VERSION"
 
-          # Fail if tag already exists on origin
           if git ls-remote --tags origin "$TAG" | grep -q "$TAG$"; then
             echo "Tag $TAG already exists on origin. Aborting."
             exit 1
