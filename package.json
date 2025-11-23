@@ -77,6 +77,5 @@
 		"./src/polyfill.ts"
 	],
 	"type": "module",
-	"version": "0.0.4-0",
-	"stableVersion": "0.0.3"
+	"version": "0.0.4"
 }
