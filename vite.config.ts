@@ -2,6 +2,7 @@ import { defineConfig } from "vitest/config";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+	//@ts-expect-error No idea why this isn't allowed
 	plugins: [tsconfigPaths()],
 	resolve: {
 		conditions: ["development"],
