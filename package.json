@@ -25,11 +25,13 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"development": "./src/index.ts",
+			"import": "./dist/index.js",
 			"default": "./dist/index.js"
 		},
 		"./no-polyfill": {
 			"types": "./dist/no-polyfill.d.ts",
 			"development": "./src/no-polyfill.ts",
+			"import": "./dist/no-polyfill.js",
 			"default": "./dist/no-polyfill.js"
 		}
 	},
