@@ -1,15 +1,22 @@
 import { defineConfig } from "vitest/config";
 import tsconfigPaths from "vite-tsconfig-paths";
+import dts from "vite-plugin-dts";
 
 export default defineConfig({
-	//@ts-expect-error No idea why this isn't allowed
-	plugins: [tsconfigPaths()],
+	plugins: [
+		tsconfigPaths(),
+		//@ts-expect-error Internal type issue
+		dts({
+			tsconfigPath: "./tsconfig.app.json",
+		}),
+	],
 	resolve: {
 		conditions: ["development"],
 	},
 	build: {
-		emptyOutDir: false,
+		emptyOutDir: true,
 		sourcemap: true,
+		minify: false,
 		lib: {
 			entry: {
 				index: "src/index.ts",
