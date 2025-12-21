@@ -3,8 +3,7 @@
 	"compilerOptions": {
 		"noEmit": true,
 		"composite": false,
-		"rootDir": "${configDir}/src",
-		"tsBuildInfoFile": "${configDir}/node_modules/.cache/tsbuildinfo/tsconfig.test.tsbuildinfo"
+		"rootDir": "${configDir}/src"
 	},
 	"include": [
 		"${configDir}/src/**/*.test.ts",

@@ -7,8 +7,7 @@
 		"emitDeclarationOnly": true,
 		"sourceMap": false,
 		"rootDir": "${configDir}/src",
-		"outDir": "${configDir}/dist",
-		"tsBuildInfoFile": "${configDir}/node_modules/.cache/tsbuildinfo/tsconfig.app.tsbuildinfo"
+		"outDir": "${configDir}/dist"
 	},
 	"include": ["${configDir}/src/**/*.ts"],
 	"exclude": [

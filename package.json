@@ -7,12 +7,13 @@
 	"devDependencies": {
 		"@types/ws": "^8.18.1",
 		"core-js": "^3.47.0",
-		"prettier": "^3.6.2",
+		"prettier": "^3.7.4",
 		"tsc-alias": "^1.8.16",
 		"typescript": "^5.9.3",
-		"vite": "^7.2.4",
-		"vite-tsconfig-paths": "^5.1.4",
-		"vitest": "^4.0.13",
+		"vite": "^7.3.0",
+		"vite-plugin-dts": "^4.5.4",
+		"vite-tsconfig-paths": "^6.0.3",
+		"vitest": "^4.0.16",
 		"ws": "^8.18.3"
 	},
 	"engines": {
@@ -65,10 +66,8 @@
 		"url": "git+https://github.com/andrew-w-ross/indisposed.git"
 	},
 	"scripts": {
-		"clean": "rm -rf node_modules/.cache/tsbuildinfo/ & rm -rf dist/ && mkdir -p dist",
-		"build:types": "tsc -b tsconfig.json && tsc-alias -p tsconfig.app.json",
-		"build:vite": "vite build",
-		"build": "yarn build:vite & yarn build:types",
+		"clean": "rm -rf dist/ && mkdir -p dist",
+		"build": "vite build",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"format": "prettier --write .",
