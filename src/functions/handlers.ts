@@ -141,8 +141,7 @@ export function on<
 
 	emitter.on(event, handler);
 
-	return toDisposable(ch, () => {
+	return toDisposable(ch.iterator, () => {
 		emitter.off(event, handler);
-		ch.close();
 	});
 }

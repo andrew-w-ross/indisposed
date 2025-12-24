@@ -2,11 +2,20 @@ import { describe, expect, it } from "vitest";
 import { channel } from "./channel";
 
 describe("channel", () => {
-	it("should be an async iterable", () => {
+	it("should return a channel with push, closed, and iterator", () => {
 		const ch = channel<number>();
-		expect(ch[Symbol.asyncIterator]).toBeDefined();
-		expect(ch[Symbol.asyncIterator]()).toBe(ch);
-		ch.close();
+		expect(ch.push).toBeDefined();
+		expect(ch.closed).toBe(false);
+		expect(ch.iterator).toBeDefined();
+		expect(ch.iterator[Symbol.asyncIterator]).toBeDefined();
+		ch.iterator[Symbol.dispose]();
+	});
+
+	it("iterator should be an async iterable", () => {
+		const ch = channel<number>();
+		expect(ch.iterator[Symbol.asyncIterator]).toBeDefined();
+		expect(ch.iterator[Symbol.asyncIterator]()).toBe(ch.iterator);
+		ch.iterator[Symbol.dispose]();
 	});
 
 	it("should deliver pushed values to consumers", async () => {
@@ -15,20 +24,20 @@ describe("channel", () => {
 		ch.push("hello");
 		ch.push("world");
 
-		const result1 = await ch.next();
-		const result2 = await ch.next();
+		const result1 = await ch.iterator.next();
+		const result2 = await ch.iterator.next();
 
 		expect(result1).toEqual({ value: "hello", done: false });
 		expect(result2).toEqual({ value: "world", done: false });
 
-		ch.close();
+		ch.iterator[Symbol.dispose]();
 	});
 
 	it("should wait for values when none are buffered", async () => {
 		const ch = channel<number>();
 
 		// Start waiting before pushing
-		const promise = ch.next();
+		const promise = ch.iterator.next();
 
 		// Push after a small delay
 		setTimeout(() => ch.push(42), 10);
@@ -36,7 +45,7 @@ describe("channel", () => {
 		const result = await promise;
 		expect(result).toEqual({ value: 42, done: false });
 
-		ch.close();
+		ch.iterator[Symbol.dispose]();
 	});
 
 	it("should buffer events up to maxBuffer", async () => {
@@ -50,11 +59,11 @@ describe("channel", () => {
 		ch.push(5); // Should drop 2
 
 		// Should only get the last 3 events
-		expect(await ch.next()).toEqual({ value: 3, done: false });
-		expect(await ch.next()).toEqual({ value: 4, done: false });
-		expect(await ch.next()).toEqual({ value: 5, done: false });
+		expect(await ch.iterator.next()).toEqual({ value: 3, done: false });
+		expect(await ch.iterator.next()).toEqual({ value: 4, done: false });
+		expect(await ch.iterator.next()).toEqual({ value: 5, done: false });
 
-		ch.close();
+		ch.iterator[Symbol.dispose]();
 	});
 
 	it("should respect maxBuffer: 0 (no buffering)", async () => {
@@ -65,7 +74,7 @@ describe("channel", () => {
 		ch.push(2);
 
 		// Start waiting
-		const promise = ch.next();
+		const promise = ch.iterator.next();
 
 		// This push should be delivered
 		ch.push(3);
@@ -73,18 +82,18 @@ describe("channel", () => {
 		const result = await promise;
 		expect(result).toEqual({ value: 3, done: false });
 
-		ch.close();
+		ch.iterator[Symbol.dispose]();
 	});
 
-	it("should return done after close (buffer is not drained by default)", async () => {
+	it("should return done after dispose (buffer is not drained by default)", async () => {
 		const ch = channel<number>();
 
 		ch.push(1);
-		ch.close();
+		ch.iterator[Symbol.dispose]();
 
-		// Closing immediately ends iteration, buffer is not drained
-		expect(await ch.next()).toEqual({ value: undefined, done: true });
-		expect(await ch.next()).toEqual({ value: undefined, done: true });
+		// Disposing immediately ends iteration, buffer is not drained
+		expect(await ch.iterator.next()).toEqual({ value: undefined, done: true });
+		expect(await ch.iterator.next()).toEqual({ value: undefined, done: true });
 	});
 
 	it("should drain buffer when drain option is true", async () => {
@@ -93,76 +102,76 @@ describe("channel", () => {
 		ch.push(1);
 		ch.push(2);
 		ch.push(3);
-		ch.close();
+		ch.iterator[Symbol.dispose]();
 
-		// Should still get buffered values after close
-		expect(await ch.next()).toEqual({ value: 1, done: false });
-		expect(await ch.next()).toEqual({ value: 2, done: false });
-		expect(await ch.next()).toEqual({ value: 3, done: false });
+		// Should still get buffered values after dispose
+		expect(await ch.iterator.next()).toEqual({ value: 1, done: false });
+		expect(await ch.iterator.next()).toEqual({ value: 2, done: false });
+		expect(await ch.iterator.next()).toEqual({ value: 3, done: false });
 
 		// Now should be done
-		expect(await ch.next()).toEqual({ value: undefined, done: true });
+		expect(await ch.iterator.next()).toEqual({ value: undefined, done: true });
 	});
 
-	it("should drain to waiting consumers on close when drain is true", async () => {
+	it("should drain to waiting consumers on dispose when drain is true", async () => {
 		const ch = channel<number>({ drain: true });
 
 		// Start waiting
-		const promise1 = ch.next();
-		const promise2 = ch.next();
+		const promise1 = ch.iterator.next();
+		const promise2 = ch.iterator.next();
 
-		// Push and close
+		// Push and dispose
 		ch.push(1);
 		ch.push(2);
 		ch.push(3);
-		ch.close();
+		ch.iterator[Symbol.dispose]();
 
 		// Waiting consumers should get values
 		expect(await promise1).toEqual({ value: 1, done: false });
 		expect(await promise2).toEqual({ value: 2, done: false });
 
 		// Remaining buffered value should still be available
-		expect(await ch.next()).toEqual({ value: 3, done: false });
-		expect(await ch.next()).toEqual({ value: undefined, done: true });
+		expect(await ch.iterator.next()).toEqual({ value: 3, done: false });
+		expect(await ch.iterator.next()).toEqual({ value: undefined, done: true });
 	});
 
 	it("should work with for await when drain is true", async () => {
 		const ch = channel<number>({ drain: true });
 		const results: number[] = [];
 
-		// Push some values and close
+		// Push some values and dispose
 		ch.push(1);
 		ch.push(2);
 		ch.push(3);
-		ch.close();
+		ch.iterator[Symbol.dispose]();
 
-		for await (const value of ch) {
+		for await (const value of ch.iterator) {
 			results.push(value);
 		}
 
 		expect(results).toEqual([1, 2, 3]);
 	});
 
-	it("should resolve waiting consumers with done on close", async () => {
+	it("should resolve waiting consumers with done on dispose", async () => {
 		const ch = channel<number>();
 
 		// Start waiting
-		const promise = ch.next();
+		const promise = ch.iterator.next();
 
-		// Close while waiting
-		ch.close();
+		// Dispose while waiting
+		ch.iterator[Symbol.dispose]();
 
 		const result = await promise;
 		expect(result).toEqual({ value: undefined, done: true });
 	});
 
-	it("should ignore pushes after close", async () => {
+	it("should ignore pushes after dispose", async () => {
 		const ch = channel<number>();
 
-		ch.close();
+		ch.iterator[Symbol.dispose]();
 		ch.push(1); // Should be ignored
 
-		const result = await ch.next();
+		const result = await ch.iterator.next();
 		expect(result).toEqual({ value: undefined, done: true });
 	});
 
@@ -170,32 +179,34 @@ describe("channel", () => {
 		const ch = channel<number>();
 
 		expect(ch.closed).toBe(false);
-		ch.close();
+		ch.iterator[Symbol.dispose]();
 		expect(ch.closed).toBe(true);
 	});
 
-	it("should be disposable", () => {
+	it("iterator should be disposable", () => {
 		const ch = channel<number>();
 
-		expect(ch[Symbol.dispose]).toBeDefined();
-		ch[Symbol.dispose]();
+		expect(ch.iterator[Symbol.dispose]).toBeDefined();
+		ch.iterator[Symbol.dispose]();
 		expect(ch.closed).toBe(true);
 	});
 
 	it("should work with using statement", async () => {
 		const results: number[] = [];
 
+		const ch = channel<number>();
 		{
-			using ch = channel<number>();
+			using iter = ch.iterator;
 
 			ch.push(1);
 			ch.push(2);
 
-			results.push((await ch.next()).value!);
-			results.push((await ch.next()).value!);
+			results.push((await iter.next()).value!);
+			results.push((await iter.next()).value!);
 		}
 
 		expect(results).toEqual([1, 2]);
+		expect(ch.closed).toBe(true);
 	});
 
 	it("should return done when calling return()", async () => {
@@ -203,21 +214,21 @@ describe("channel", () => {
 
 		ch.push(1);
 
-		const returnResult = await ch.return!();
+		const returnResult = await ch.iterator.return!();
 		expect(returnResult).toEqual({ value: undefined, done: true });
 
 		// Should be closed now
 		expect(ch.closed).toBe(true);
-		expect(await ch.next()).toEqual({ value: undefined, done: true });
+		expect(await ch.iterator.next()).toEqual({ value: undefined, done: true });
 	});
 
 	it("should handle multiple waiting consumers correctly", async () => {
 		const ch = channel<number>();
 
 		// Queue up multiple consumers
-		const promise1 = ch.next();
-		const promise2 = ch.next();
-		const promise3 = ch.next();
+		const promise1 = ch.iterator.next();
+		const promise2 = ch.iterator.next();
+		const promise3 = ch.iterator.next();
 
 		// Push values
 		ch.push(1);
@@ -234,7 +245,7 @@ describe("channel", () => {
 		expect(result2.value).toBe(2);
 		expect(result3.value).toBe(3);
 
-		ch.close();
+		ch.iterator[Symbol.dispose]();
 	});
 
 	it("should work with for await...of loop", async () => {
@@ -243,7 +254,7 @@ describe("channel", () => {
 
 		// Start consuming in background
 		const consumer = (async () => {
-			for await (const value of ch) {
+			for await (const value of ch.iterator) {
 				results.push(value);
 			}
 		})();
@@ -256,7 +267,7 @@ describe("channel", () => {
 		// Allow microtasks to process
 		await new Promise((r) => setTimeout(r, 10));
 
-		ch.close();
+		ch.iterator[Symbol.dispose]();
 		await consumer;
 
 		expect(results).toEqual([1, 2, 3]);
@@ -271,10 +282,10 @@ describe("channel", () => {
 				ch.push(i);
 				await new Promise((r) => setTimeout(r, 1));
 			}
-			ch.close();
+			ch.iterator[Symbol.dispose]();
 		})();
 
-		for await (const value of ch) {
+		for await (const value of ch.iterator) {
 			results.push(value);
 		}
 
@@ -282,12 +293,12 @@ describe("channel", () => {
 		expect(results).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 	});
 
-	it("should only close once", () => {
+	it("should only dispose once", () => {
 		const ch = channel<number>();
 
-		ch.close();
-		ch.close(); // Should not throw
-		ch.close();
+		ch.iterator[Symbol.dispose]();
+		ch.iterator[Symbol.dispose](); // Should not throw
+		ch.iterator[Symbol.dispose]();
 
 		expect(ch.closed).toBe(true);
 	});

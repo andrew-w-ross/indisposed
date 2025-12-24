@@ -1,5 +1,3 @@
-import { toDisposable } from "./disposable";
-
 export type ChannelOptions = {
 	/**
 	 * Maximum amount of events to be buffered.
@@ -10,9 +8,9 @@ export type ChannelOptions = {
 	maxBuffer?: number;
 
 	/**
-	 * Whether to drain buffered events before ending iteration on close.
-	 * When true, buffered events will still be yielded after close() is called.
-	 * When false, close() immediately ends iteration and discards buffered events.
+	 * Whether to drain buffered events before ending iteration on dispose.
+	 * When true, buffered events will still be yielded after dispose is called.
+	 * When false, dispose immediately ends iteration and discards buffered events.
 	 * @default false
 	 */
 	drain?: boolean;
@@ -23,7 +21,17 @@ const DEFAULT_OPTIONS = {
 	drain: false,
 } satisfies ChannelOptions;
 
-export type Channel<T> = AsyncIterableIterator<T, undefined, void> & {
+/**
+ * The iterator portion of a channel - this is what consumers see.
+ */
+export type ChannelIterator<T> = AsyncIterableIterator<T, undefined, void> & {
+	[Symbol.dispose]: () => void;
+};
+
+/**
+ * The full channel handle with push capability - for internal/producer use.
+ */
+export type Channel<T> = {
 	/**
 	 * Push a value into the channel.
 	 * If there are waiting consumers, the value is delivered immediately.
@@ -31,16 +39,14 @@ export type Channel<T> = AsyncIterableIterator<T, undefined, void> & {
 	 */
 	push: (value: T) => void;
 	/**
-	 * Close the channel. No more values can be pushed.
-	 * If drain is false (default), waiting consumers will receive done immediately.
-	 * If drain is true, buffered events will be delivered before done.
-	 */
-	close: () => void;
-	/**
 	 * Whether the channel is closed.
 	 */
 	readonly closed: boolean;
-	[Symbol.dispose]: () => void;
+	/**
+	 * The async iterator for consuming values.
+	 * This is what should be exposed to downstream consumers.
+	 */
+	iterator: ChannelIterator<T>;
 };
 
 /**
@@ -49,38 +55,36 @@ export type Channel<T> = AsyncIterableIterator<T, undefined, void> & {
  * This is a low-level primitive for building async iterators from push-based sources
  * like event emitters, intervals, or any producer that pushes values over time.
  *
+ * The returned channel has a `push` method for producers and an `iterator` property
+ * for consumers. Only expose the `iterator` to downstream code.
+ *
  * @param options - Channel configuration
- * @returns A disposable async iterator with a `push` method
+ * @returns A channel with push capability and a disposable async iterator
  *
  * @example
  * ```ts
- * // Basic usage
+ * // Basic usage - producer keeps the channel, consumer gets the iterator
  * const ch = channel<string>();
+ *
+ * // Producer side
  * ch.push("hello");
  * ch.push("world");
  *
- * for await (const value of ch) {
- *   console.log(value); // "hello", "world"
- *   if (shouldStop) ch.close();
+ * // Consumer side - only sees the iterator
+ * for await (const value of ch.iterator) {
+ *   console.log(value);
+ *   if (shouldStop) break;
  * }
  * ```
  *
  * @example
  * ```ts
- * // With event emitter
- * const ch = channel<string>();
- * emitter.on("data", (data) => ch.push(data));
- * emitter.on("end", () => ch.close());
- *
- * for await (const data of ch) {
- *   process(data);
+ * // Building a custom async iterator
+ * function myAsyncSource() {
+ *   const ch = channel<number>();
+ *   // ... set up producer that calls ch.push()
+ *   return ch.iterator; // Only expose the iterator
  * }
- * ```
- *
- * @example
- * ```ts
- * // No buffering - only deliver to waiting consumers
- * const ch = channel<number>({ maxBuffer: 0 });
  * ```
  */
 export function channel<T>(options?: ChannelOptions): Channel<T> {
@@ -118,7 +122,7 @@ export function channel<T>(options?: ChannelOptions): Channel<T> {
 		drainQueue();
 	};
 
-	const close = () => {
+	const dispose = () => {
 		if (closed) return;
 		closed = true;
 
@@ -138,12 +142,7 @@ export function channel<T>(options?: ChannelOptions): Channel<T> {
 		}
 	};
 
-	const iterator: Channel<T> = {
-		push,
-		close,
-		get closed() {
-			return closed;
-		},
+	const iterator: ChannelIterator<T> = {
 		async next() {
 			// If drain mode, return buffered events even after close
 			if (shouldDrain && events.length) {
@@ -165,14 +164,20 @@ export function channel<T>(options?: ChannelOptions): Channel<T> {
 			});
 		},
 		return() {
-			close();
+			dispose();
 			return Promise.resolve(doneResult());
 		},
 		[Symbol.asyncIterator]() {
 			return this;
 		},
-		[Symbol.dispose]: close,
+		[Symbol.dispose]: dispose,
 	};
 
-	return toDisposable(iterator, close);
+	return {
+		push,
+		get closed() {
+			return closed;
+		},
+		iterator,
+	};
 }

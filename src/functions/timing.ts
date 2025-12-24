@@ -97,10 +97,9 @@ export function interval(ms: number, options?: IntervalOptions) {
 	const intervalId = setInterval(() => {
 		if (ch.closed) return;
 		ch.push(currentValue++);
-	});
+	}, ms);
 
-	return toDisposable(ch, () => {
+	return toDisposable(ch.iterator, () => {
 		clearInterval(intervalId);
-		ch.close();
 	});
 }

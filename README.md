@@ -236,42 +236,38 @@ const ticks = interval(100, { maxBuffer: 10, drain: true });
 Create a buffered async channel for pushing values and consuming them via async iteration.
 
 This is a low-level primitive for building async iterators from push-based sources.
+The channel separates producer (`push`) and consumer (`iterator`) concerns - only expose
+the `iterator` to downstream code.
 
 **Options:**
 
 - `maxBuffer` - Maximum events to buffer (default: 100). Set to 0 for no buffering.
-- `drain` - Whether to drain buffered events on close (default: false)
+- `drain` - Whether to drain buffered events on dispose (default: false)
 
 ```typescript
 import { channel } from "indisposed";
 
-// Basic usage
+// Basic usage - producer keeps the channel, consumer gets the iterator
 const ch = channel<string>();
+
+// Producer side
 ch.push("hello");
 ch.push("world");
 
-for await (const value of ch) {
-	console.log(value); // "hello", "world"
-	if (shouldStop) ch.close();
+// Consumer side - only sees the iterator
+{
+	using iter = ch.iterator;
+	for await (const value of iter) {
+		console.log(value);
+		if (shouldStop) break;
+	}
 }
 
-// With event emitter
-const ch = channel<string>();
-emitter.on("data", (data) => ch.push(data));
-emitter.on("end", () => ch.close());
-
-for await (const data of ch) {
-	process(data);
-}
-
-// Drain buffer on close
-const ch = channel<number>({ drain: true });
-ch.push(1);
-ch.push(2);
-ch.close();
-
-for await (const value of ch) {
-	console.log(value); // 1, 2 (buffer is drained before done)
+// Building a custom async source
+function createDataStream() {
+	const ch = channel<Data>();
+	source.on("data", (d) => ch.push(d));
+	return ch.iterator; // Only expose the iterator
 }
 ```
 
