@@ -211,7 +211,7 @@ describe("on", () => {
 
 	it("drops oldest events when buffer exceeds maxBuffer", async () => {
 		const { emitter, emit } = createEmitter();
-		const iterator = on(emitter, "numberEvent", 3);
+		const iterator = on(emitter, "numberEvent", { maxBuffer: 3 });
 
 		// Emit more events than buffer size
 		emit("numberEvent", 1);

@@ -1,5 +1,6 @@
 import type { EventHandlerParams, EventNames, Fn } from "~/types";
 import { toDisposable } from "./disposable";
+import { channel, type ChannelOptions } from "./channel";
 import { type UnpackArray, unpackArray } from "./fn";
 
 export type Subscription = (event: any, handler: Fn) => any;
@@ -100,7 +101,7 @@ export type OnResult<
  *
  * @param emitter - Event emitter with `on` and `off` methods
  * @param event - Event name (must match one of the emitter's overloads)
- * @param maxBuffer - Maximum number of events to buffer (default: 100)
+ * @param options - Channel options (maxBuffer, etc.)
  * @returns Disposable async iterator that yields handler arguments
  *
  * @example
@@ -129,78 +130,18 @@ export type OnResult<
 export function on<
 	EventEmitter extends HasOn,
 	const Event extends EventNames<EventEmitter["on"]>,
->(emitter: EventEmitter, event: Event, maxBuffer = 100) {
+>(emitter: EventEmitter, event: Event, options?: ChannelOptions) {
 	type Item = OnResult<EventEmitter, Event>;
-	type IterationResult = IteratorResult<Item, undefined>;
 
-	let done = false;
-	const events: Item[] = [];
-	const waiters: ((value: IterationResult) => void)[] = [];
-
-	const doneResult = () => ({
-		value: undefined,
-		done: true as const,
-	});
-
-	const drain = () => {
-		// Pair off as many as possible, FIFO ↔ FIFO
-		while (!done && events.length && waiters.length) {
-			const value = events.shift()!;
-			const resolve = waiters.shift()!;
-			resolve({ value, done: false });
-		}
-	};
+	const ch = channel<Item>(options);
 
 	const handler = (...args: unknown[]) => {
-		if (done) return;
-		const value = unpackArray(args) as Item;
-
-		if (maxBuffer <= 0) {
-			if (waiters.length) events.push(value); // only deliver to waiters
-		} else {
-			events.push(value);
-			if (events.length > maxBuffer) events.shift();
-		}
-		drain();
+		ch.push(unpackArray(args) as Item);
 	};
 
 	emitter.on(event, handler);
 
-	const dispose = () => {
-		if (done) return;
+	return toDisposable(ch.iterator, () => {
 		emitter.off(event, handler);
-		done = true;
-
-		while (waiters.length > 0) {
-			const waiter = waiters.shift();
-			waiter?.(doneResult());
-		}
-	};
-
-	const iterator: AsyncIterableIterator<Item, undefined, void> = {
-		async next() {
-			// If already disposed, return done
-			if (done) {
-				return doneResult();
-			}
-
-			if (events.length)
-				return { value: events.shift()!, done: false } as const;
-
-			// Wait for the next event
-			return new Promise<IterationResult>((resolve) => {
-				waiters.push(resolve);
-				drain();
-			});
-		},
-		return() {
-			dispose();
-			return Promise.resolve(doneResult());
-		},
-		[Symbol.asyncIterator]() {
-			return this;
-		},
-	};
-
-	return toDisposable(iterator, dispose);
+	});
 }

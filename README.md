@@ -10,6 +10,8 @@ The missing utilities for JavaScript's [Explicit Resource Management](https://gi
 
 - 🧹 **Resource Management** - Convert any resource into a disposable with `toDisposable` and `toAsyncDisposable`
 - 🎧 **Event Handlers** - Transform event emitters into disposable iterators with `on` and promises with `once`
+- ⏱️ **Timing Utilities** - Disposable `timeout` and `interval` for clean timer management
+- 📡 **Channels** - Build async iterators from push-based sources with `channel`
 - 🔒 **Scoped Execution** - Execute code with automatic cleanup using `invoke`
 - 📦 **Zero Dependencies** - Lightweight and focused
 - 🔧 **TypeScript First** - Full type safety and inference
@@ -133,7 +135,7 @@ import { once } from "indisposed";
 }
 ```
 
-### `on(emitter, event, maxBuffer?)`
+### `on(emitter, event, options?)`
 
 Create a disposable async iterator for multiple events.
 
@@ -163,6 +165,109 @@ import { on } from "indisposed";
 	for await (const [x, y] of positions) {
 		console.log(`Position: ${x}, ${y}`);
 	}
+}
+
+// With buffer options
+{
+	using events = on(emitter, "data", { maxBuffer: 10, drain: true });
+	// ...
+}
+```
+
+### `timeout(ms)`
+
+Create a disposable promise that resolves after a delay.
+
+```typescript
+import { timeout } from "indisposed";
+
+// Basic usage
+await timeout(1000);
+console.log("1 second passed");
+
+// With using - automatically clears timeout when scope exits
+{
+	using timer = timeout(5000);
+	await timer;
+} // timeout cleared if scope exits early
+
+// Racing with other promises
+{
+	using timer = timeout(10000);
+	using data = once(socket, "data");
+
+	await Promise.race([timer, data]);
+} // both cleaned up regardless of which wins
+```
+
+### `interval(ms, options?)`
+
+Create a disposable async iterator that yields incrementing numbers at a fixed interval.
+
+```typescript
+import { interval } from "indisposed";
+
+// Basic usage - tick every second
+{
+	using ticks = interval(1000);
+
+	for await (const tick of ticks) {
+		console.log(`Tick ${tick}`); // 0, 1, 2, ...
+		if (tick >= 5) break;
+	}
+} // interval automatically cleared
+
+// Polling pattern
+{
+	using poll = interval(5000);
+
+	for await (const _ of poll) {
+		const status = await checkStatus();
+		if (status === "complete") break;
+	}
+}
+
+// With options
+const ticks = interval(100, { maxBuffer: 10, drain: true });
+```
+
+### `channel<T>(options?)`
+
+Create a buffered async channel for pushing values and consuming them via async iteration.
+
+This is a low-level primitive for building async iterators from push-based sources.
+The channel separates producer (`push`) and consumer (`iterator`) concerns - only expose
+the `iterator` to downstream code.
+
+**Options:**
+
+- `maxBuffer` - Maximum events to buffer (default: 100). Set to 0 for no buffering.
+- `drain` - Whether to drain buffered events on dispose (default: false)
+
+```typescript
+import { channel } from "indisposed";
+
+// Basic usage - producer keeps the channel, consumer gets the iterator
+const ch = channel<string>();
+
+// Producer side
+ch.push("hello");
+ch.push("world");
+
+// Consumer side - only sees the iterator
+{
+	using iter = ch.iterator;
+	for await (const value of iter) {
+		console.log(value);
+		if (shouldStop) break;
+	}
+}
+
+// Building a custom async source
+function createDataStream() {
+	const ch = channel<Data>();
+	source.on("data", (d) => ch.push(d));
+	return ch.iterator; // Only expose the iterator
 }
 ```
 
