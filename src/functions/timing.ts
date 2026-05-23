@@ -1,5 +1,5 @@
-import { toDisposable } from "./disposable";
-import { channel, type ChannelOptions } from "./channel";
+import { toDisposable } from "#/functions/disposable";
+import { channel, type ChannelOptions } from "#/functions/channel";
 
 /**
  * Creates a disposable promise that resolves after a specified delay.

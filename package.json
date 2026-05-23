@@ -6,15 +6,13 @@
 	"description": "The missing utilities for disposable resources.",
 	"devDependencies": {
 		"@types/ws": "^8.18.1",
-		"core-js": "^3.47.0",
-		"prettier": "^3.7.4",
-		"tsc-alias": "^1.8.16",
-		"typescript": "^5.9.3",
-		"vite": "^7.3.0",
-		"vite-plugin-dts": "^4.5.4",
-		"vite-tsconfig-paths": "^6.0.3",
-		"vitest": "^4.0.16",
-		"ws": "^8.18.3"
+		"core-js": "^3.49.0",
+		"prettier": "^3.8.3",
+		"typescript": "^6.0.3",
+		"unplugin-dts": "^1.0.1",
+		"vite": "^8.0.14",
+		"vitest": "^4.1.7",
+		"ws": "^8.20.1"
 	},
 	"engines": {
 		"node": ">=22.20.0"
@@ -32,6 +30,13 @@
 			"types": "./dist/no-polyfill.d.ts",
 			"import": "./dist/no-polyfill.js",
 			"default": "./dist/no-polyfill.js"
+		}
+	},
+	"imports": {
+		"#/*": {
+			"development": "./src/*.ts",
+			"types": "./dist/*.d.ts",
+			"default": "./dist/*.js"
 		}
 	},
 	"homepage": "https://github.com/andrew-w-ross/indisposed#readme",
@@ -52,7 +57,7 @@
 	],
 	"license": "MIT",
 	"name": "indisposed",
-	"packageManager": "yarn@4.11.0",
+	"packageManager": "pnpm@11.2.2",
 	"peerDependencies": {
 		"core-js": "^3.46.0"
 	},

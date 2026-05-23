@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { channel } from "./channel";
+import { channel } from "#/functions/channel";
 
 describe("channel", () => {
 	it("should return a channel with push, closed, and iterator", () => {

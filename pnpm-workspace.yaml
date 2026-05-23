@@ -1,0 +1,5 @@
+allowBuilds:
+  # esbuild's postinstall provides the platform binary used by Vite.
+  esbuild: true
+  # core-js only prints a funding banner on install; skip it.
+  core-js: false

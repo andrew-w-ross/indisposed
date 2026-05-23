@@ -1,3 +1,3 @@
-import "./polyfill";
+import "#/polyfill";
 
-export * from "./no-polyfill";
+export * from "#/no-polyfill";
