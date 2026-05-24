@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { toAsyncDisposable, toDisposable } from "./disposable";
+import { toAsyncDisposable, toDisposable } from "#/functions/disposable";
 
 describe("toDisposable", () => {
 	it("should call dispose function when Symbol.dispose is invoked", () => {

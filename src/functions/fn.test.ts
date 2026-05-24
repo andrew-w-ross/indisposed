@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { WebSocketServer } from "ws";
-import { invoke, unpackArray } from "./fn";
-import { once } from "./handlers";
-import { toAsyncDisposable } from "./disposable";
+import { invoke, unpackArray } from "#/functions/fn";
+import { once } from "#/functions/handlers";
+import { toAsyncDisposable } from "#/functions/disposable";
 
 describe("unpackArray", () => {
 	it("returns undefined for empty array", () => {

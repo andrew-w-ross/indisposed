@@ -1,7 +1,7 @@
-import type { EventHandlerParams, EventNames, Fn } from "~/types";
-import { toDisposable } from "./disposable";
-import { channel, type ChannelOptions } from "./channel";
-import { type UnpackArray, unpackArray } from "./fn";
+import type { EventHandlerParams, EventNames, Fn } from "#/types";
+import { toDisposable } from "#/functions/disposable";
+import { channel, type ChannelOptions } from "#/functions/channel";
+import { type UnpackArray, unpackArray } from "#/functions/fn";
 
 export type Subscription = (event: any, handler: Fn) => any;
 

@@ -1,6 +1,6 @@
 import { describe, expectTypeOf, it } from "vitest";
-import type { Fn } from "~/types";
-import { on, once } from "./handlers";
+import type { Fn } from "#/types";
+import { on, once } from "#/functions/handlers";
 
 describe("handleOnce", () => {
 	type TestEmitter = {

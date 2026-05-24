@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { timeout, interval } from "./timing";
+import { timeout, interval } from "#/functions/timing";
 
 describe("timeout", () => {
 	beforeEach(() => {

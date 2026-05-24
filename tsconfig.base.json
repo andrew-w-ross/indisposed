@@ -2,6 +2,7 @@
 	"compilerOptions": {
 		"module": "ESNext",
 		"moduleResolution": "bundler",
+		"customConditions": ["development"],
 		"target": "ES2023",
 		"types": [],
 		"lib": ["ES2023", "ESNext.disposable", "ES2024.Promise", "WebWorker"],
@@ -18,10 +19,6 @@
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
 		"noUncheckedSideEffectImports": true,
-		"resolveJsonModule": true,
-		"baseUrl": ".",
-		"paths": {
-			"~/*": ["${configDir}/src/*"]
-		}
+		"resolveJsonModule": true
 	}
 }

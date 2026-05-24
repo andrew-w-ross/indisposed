@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Fn } from "~/types";
-import { on, once, type HasOff, type HasOn, type HasOnce } from "./handlers";
+import type { Fn } from "#/types";
+import {
+	on,
+	once,
+	type HasOff,
+	type HasOn,
+	type HasOnce,
+} from "#/functions/handlers";
 
 describe("once", () => {
 	type EventMap = {

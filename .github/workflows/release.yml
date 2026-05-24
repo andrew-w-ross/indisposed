@@ -67,16 +67,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24.x
-          cache: yarn
+          cache: pnpm
 
       - name: Install dependencies
-        run: yarn install --immutable
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: yarn build
+        run: pnpm build
 
       - name: Run tests
-        run: yarn test
+        run: pnpm test
 
       - name: Configure git
         run: |
@@ -95,7 +95,7 @@ jobs:
             BUMP_TYPE="$VERSION_TYPE"
           fi
 
-          yarn version "$BUMP_TYPE" --immediate
+          pnpm version "$BUMP_TYPE" --no-git-tag-version
 
           NEW_VERSION=$(node -p "require('./package.json').version")
 
@@ -127,17 +127,22 @@ jobs:
           IS_PRERELEASE: ${{ steps.version.outputs.is_prerelease }}
           TOLERATE_REPUBLISH: ${{ github.event.inputs.tolerate_republish }}
         run: |
-          PUBLISH_FLAGS="--access public"
+          # --no-git-checks: publishing from the release-tmp branch, not main.
+          PUBLISH_FLAGS="--access public --no-git-checks"
 
           if [ "$IS_PRERELEASE" = "true" ]; then
             PUBLISH_FLAGS="$PUBLISH_FLAGS --tag next"
           fi
 
-          if [ "$TOLERATE_REPUBLISH" = "true" ]; then
-            PUBLISH_FLAGS="$PUBLISH_FLAGS --tolerate-republish"
-          fi
+          # pnpm has no --tolerate-republish; skip the publish if the exact
+          # version is already on npm.
+          PKG="$(node -p "require('./package.json').name")@$(node -p "require('./package.json').version")"
 
-          yarn npm publish $PUBLISH_FLAGS
+          if [ "$TOLERATE_REPUBLISH" = "true" ] && npm view "$PKG" version >/dev/null 2>&1; then
+            echo "$PKG already published; tolerating republish, skipping."
+          else
+            pnpm publish $PUBLISH_FLAGS
+          fi
 
       - name: Push commit and tag
         env:
